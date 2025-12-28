@@ -27,6 +27,15 @@ app.use(cors()); // Allow all origins for development
 app.use(helmet());
 app.use(morgan('dev'));
 
+// Global Error Handler for Uncaught Exceptions
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! 💥', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION! 💥', err);
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/bank', bankRoutes);

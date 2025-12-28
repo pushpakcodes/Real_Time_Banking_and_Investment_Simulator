@@ -10,11 +10,13 @@ const generateToken = (id) => {
 
 const registerUser = async (req, res) => {
   const { username, email, password } = req.body;
+  console.log(`Registering user: ${email}`);
 
   try {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
+      console.log('User already exists');
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -25,8 +27,10 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
+      console.log('User created, initializing market...');
       // Initialize Stock Market for this user
       await initializeUserMarket(user._id);
+      console.log('Market initialized.');
 
       res.status(201).json({
         _id: user._id,
@@ -35,9 +39,11 @@ const registerUser = async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
+      console.log('Invalid user data');
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
+    console.error('Registration Error:', error);
     res.status(500).json({ message: error.message });
   }
 };
