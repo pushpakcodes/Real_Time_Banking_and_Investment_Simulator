@@ -20,7 +20,9 @@ const Register = () => {
       await register(username, email, password);
       navigate('/dashboard');
     } catch (err) {
-      alert('Registration failed');
+      console.error('Registration Error:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Registration failed';
+      alert(`Error: ${errorMessage}`);
     }
   };
 
@@ -41,7 +43,7 @@ const Register = () => {
               animate={{ y: 0 }}
               className="flex justify-center mb-6"
             >
-              <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+              <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-money-green to-money-light flex items-center justify-center shadow-lg shadow-money-green/30">
                 <TrendingUp className="h-8 w-8 text-white" />
               </div>
             </motion.div>
@@ -54,14 +56,14 @@ const Register = () => {
               <label className="text-sm font-medium text-gray-300 ml-1">Username</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                  <User className="h-5 w-5 text-gray-500 group-focus-within:text-money-light transition-colors" />
                 </div>
                 <input 
                   type="text" 
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)} 
                   required 
-                  className="block w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all hover:bg-white/10"
+                  className="block w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-money-green/50 focus:border-money-green/50 transition-all hover:bg-white/10"
                   placeholder="TraderJoe"
                 />
               </div>
@@ -71,14 +73,14 @@ const Register = () => {
               <label className="text-sm font-medium text-gray-300 ml-1">Email Address</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                  <Mail className="h-5 w-5 text-gray-500 group-focus-within:text-money-light transition-colors" />
                 </div>
                 <input 
                   type="email" 
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
-                  className="block w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all hover:bg-white/10"
+                  className="block w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-money-green/50 focus:border-money-green/50 transition-all hover:bg-white/10"
                   placeholder="you@example.com"
                 />
               </div>
@@ -88,14 +90,14 @@ const Register = () => {
               <label className="text-sm font-medium text-gray-300 ml-1">Password</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                  <Lock className="h-5 w-5 text-gray-500 group-focus-within:text-money-light transition-colors" />
                 </div>
                 <input 
                   type="password" 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
                   required 
-                  className="block w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all hover:bg-white/10"
+                  className="block w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-money-green/50 focus:border-money-green/50 transition-all hover:bg-white/10"
                   placeholder="••••••••"
                 />
               </div>
@@ -108,7 +110,7 @@ const Register = () => {
 
           <div className="mt-8 text-center text-sm text-gray-400">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-purple-400 hover:text-purple-300 transition-colors">
+            <Link to="/login" className="font-semibold text-money-light hover:text-emerald-400 transition-colors">
               Sign in
             </Link>
           </div>
