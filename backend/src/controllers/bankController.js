@@ -197,7 +197,21 @@ const transferMoney = async (req, res) => {
 const getTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find({ account: req.params.id, user: req.user._id })
-      .sort({ date: -1, realDate: -1 });
+      .sort({ date: -1 });
+    res.json(transactions);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all user transactions
+// @route   GET /api/bank/transactions
+// @access  Private
+const getAllTransactions = async (req, res) => {
+  try {
+    const transactions = await Transaction.find({ user: req.user._id })
+      .populate('account', 'bankName accountNumber')
+      .sort({ date: -1 });
     res.json(transactions);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -210,5 +224,6 @@ module.exports = {
   depositMoney,
   withdrawMoney,
   transferMoney,
-  getTransactions
+  getTransactions,
+  getAllTransactions
 };

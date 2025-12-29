@@ -28,7 +28,9 @@ const advanceSimulation = async (user, days) => {
   // Map Portfolio for quick lookup
   const portfolioMap = {};
   portfolio.forEach(p => {
-    portfolioMap[p.stock.toString()] = p.quantity;
+    if (p.stock) {
+      portfolioMap[p.stock.toString()] = p.quantity;
+    }
   });
 
   const transactionsToCreate = [];
@@ -52,7 +54,7 @@ const advanceSimulation = async (user, days) => {
       if (newPrice < 0.01) newPrice = 0.01; // Floor
 
       stock.currentPrice = newPrice;
-      stock.history.push({ date: new Date(currentDate), price: newPrice });
+      stock.simulatedHistory.push({ date: new Date(currentDate), price: newPrice });
     });
 
     // 2. Bank Interest (Daily Compounding for Simplicity)
@@ -95,8 +97,8 @@ const advanceSimulation = async (user, days) => {
                 loan.status = 'CLOSED';
             }
         } else {
-            // Insufficient Funds Logic
-            console.log(`Loan ${loan._id} defaulted due to insufficient funds.`);
+            // Insufficient Funds Logic or No Account
+            console.log(`Loan ${loan._id} defaulted due to insufficient funds or no account.`);
             loan.status = 'DEFAULTED';
             
             // Optional: Add penalty to principal? 
@@ -112,17 +114,26 @@ const advanceSimulation = async (user, days) => {
             const finalAmount = fd.principal * Math.pow((1 + fd.interestRate / 100), (fd.maturityDate - fd.startDate) / (1000 * 60 * 60 * 24 * 365)); // Simple Compound
             // Credit to source account
             const targetAcc = accounts.find(a => a._id.toString() === fd.account.toString()) || accounts[0];
-            targetAcc.balance += finalAmount;
-            fd.status = 'MATURED';
             
-            transactionsToCreate.push({
-                user: userId,
-                account: targetAcc._id,
-                type: 'FD_MATURITY',
-                amount: finalAmount,
-                description: `FD Matured ${fd._id}`,
-                date: new Date(currentDate)
-            });
+            if (targetAcc) {
+                targetAcc.balance += finalAmount;
+                fd.status = 'MATURED';
+                
+                transactionsToCreate.push({
+                    user: userId,
+                    account: targetAcc._id,
+                    type: 'FD_MATURITY',
+                    amount: finalAmount,
+                    description: `FD Matured ${fd._id}`,
+                    date: new Date(currentDate)
+                });
+            } else {
+                console.warn(`FD ${fd._id} matured but no account found to credit.`);
+                // Optionally mark as MATURED_UNPAID or keep ACTIVE? 
+                // For now, let's keep it ACTIVE so user doesn't lose money, or mark MATURED and log error.
+                // Safest: Do nothing, let it retry next time or manual intervention? 
+                // But simulation moves forward. If we don't process it, it stays ACTIVE.
+            }
         } else {
             // Accrue interest (visual only if needed)
         }

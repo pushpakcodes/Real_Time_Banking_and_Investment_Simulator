@@ -6,7 +6,8 @@ const {
   depositMoney,
   withdrawMoney,
   transferMoney,
-  getTransactions
+  getTransactions,
+  getAllTransactions
 } = require('../controllers/bankController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -16,5 +17,6 @@ router.post('/deposit', protect, depositMoney);
 router.post('/withdraw', protect, withdrawMoney);
 router.post('/transfer', protect, transferMoney);
 router.get('/accounts/:id/transactions', protect, getTransactions);
+router.get('/transactions', protect, getAllTransactions);
 
 module.exports = router;

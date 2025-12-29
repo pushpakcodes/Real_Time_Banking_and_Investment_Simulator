@@ -10,12 +10,12 @@ const createFD = async (req, res) => {
   const { amount, tenureYears, accountId } = req.body;
 
   if (amount <= 0) return res.status(400).json({ message: 'Amount must be positive' });
+  
+  // NOTE: MongoDB transactions only work on replica sets.
+  // Running sequentially for local dev environment.
 
-  const session = await mongoose.startSession();
   try {
-    session.startTransaction();
-
-    const account = await BankAccount.findOne({ _id: accountId, user: req.user._id }).session(session);
+    const account = await BankAccount.findOne({ _id: accountId, user: req.user._id });
     if (!account) throw new Error('Account not found');
     if (account.balance < amount) throw new Error('Insufficient funds');
 
@@ -29,7 +29,7 @@ const createFD = async (req, res) => {
     const maturityDate = new Date(startDate);
     maturityDate.setFullYear(maturityDate.getFullYear() + tenureYears);
 
-    const fd = await FixedDeposit.create([{
+    const fd = await FixedDeposit.create({
       user: req.user._id,
       account: account._id,
       principal: amount,
@@ -38,30 +38,26 @@ const createFD = async (req, res) => {
       maturityDate: maturityDate,
       compoundingFrequency: 'Quarterly',
       status: 'ACTIVE'
-    }], { session });
+    });
 
     // Debit Account
     account.balance -= Number(amount);
-    await account.save({ session });
+    await account.save();
 
     // Log Transaction
-    await Transaction.create([{
+    await Transaction.create({
       user: req.user._id,
       account: account._id,
       type: 'FD_CREATION',
       amount: -amount,
       description: `FD Created (Rate: ${rate}%)`,
       date: startDate
-    }], { session });
+    });
 
-    await session.commitTransaction();
-    res.status(201).json(fd[0]);
+    res.status(201).json(fd);
 
   } catch (error) {
-    await session.abortTransaction();
     res.status(400).json({ message: error.message });
-  } finally {
-    session.endSession();
   }
 };
 

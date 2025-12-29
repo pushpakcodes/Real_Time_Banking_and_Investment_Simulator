@@ -9,7 +9,16 @@ const stockSchema = new mongoose.Schema({
   volatility: { type: Number, required: true }, // 0.01 to 0.1
   trend: { type: String, enum: ['BULLISH', 'BEARISH', 'NEUTRAL'], default: 'NEUTRAL' },
   growthBias: { type: Number, default: 0 }, // Small daily bias
+  lastUpdated: { type: Date, default: Date.now },
   history: [{
+    date: Date,
+    open: Number,
+    high: Number,
+    low: Number,
+    close: Number,
+    volume: Number
+  }],
+  simulatedHistory: [{
     date: Date,
     price: Number
   }]
