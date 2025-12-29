@@ -97,7 +97,7 @@ const FDs = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Principal</p>
-                    <p className="text-white font-medium">${f.principal.toLocaleString()}</p>
+                    <p className="text-white font-medium">₹{f.principal.toLocaleString('en-IN')}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Interest Rate</p>
@@ -105,11 +105,11 @@ const FDs = () => {
                   </div>
                   <div>
                     <p className="text-gray-500">Maturity Date</p>
-                    <p className="text-blue-400 font-medium">{new Date(f.maturityDate).toLocaleDateString()}</p>
+                    <p className="text-blue-400 font-medium">{new Date(f.maturityDate).toLocaleDateString('en-IN')}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Accrued Interest</p>
-                    <p className="text-amber-400 font-medium">+${(f.accumulatedInterest || 0).toFixed(2)}</p>
+                    <p className="text-amber-400 font-medium">+₹{(f.accumulatedInterest || 0).toLocaleString('en-IN')}</p>
                   </div>
                 </div>
               </GlassCard>
@@ -125,7 +125,7 @@ const FDs = () => {
           </h3>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Investment Amount ($)</label>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Investment Amount (₹)</label>
               <input 
                 type="number" 
                 value={amount} 
@@ -152,7 +152,7 @@ const FDs = () => {
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all [&>option]:bg-gray-900"
               >
                 {accounts.map(a => (
-                  <option key={a._id} value={a._id}>{a.bankName} (${a.balance.toFixed(2)})</option>
+                  <option key={a._id} value={a._id}>{a.bankName} (₹{a.balance.toLocaleString('en-IN')})</option>
                 ))}
               </select>
             </div>

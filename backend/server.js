@@ -1,5 +1,9 @@
 const express = require('express');
 const dotenv = require('dotenv');
+
+// Load env vars
+dotenv.config();
+
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -12,9 +16,6 @@ const stockRoutes = require('./src/routes/stockRoutes');
 const fdRoutes = require('./src/routes/fdRoutes');
 const loanRoutes = require('./src/routes/loanRoutes');
 const analyticsRoutes = require('./src/routes/analyticsRoutes');
-
-// Load env vars
-dotenv.config();
 
 // Connect to database
 connectDB();
