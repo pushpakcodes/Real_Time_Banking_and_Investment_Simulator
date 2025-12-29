@@ -2,7 +2,7 @@ import { useContext, useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import api from '../api';
-import { LayoutDashboard, Wallet, TrendingUp, DollarSign, Clock, LogOut, Menu, X, Play } from 'lucide-react';
+import { LayoutDashboard, Wallet, TrendingUp, DollarSign, Clock, LogOut, Menu, X, Play, User } from 'lucide-react';
 import { AnimatedBackground } from './ui/AnimatedBackground';
 import { motion } from 'framer-motion';
 
@@ -34,33 +34,25 @@ const Layout = () => {
     { path: '/dashboard/banking', label: 'Banking', icon: <Wallet size={20} /> },
     { path: '/dashboard/stocks', label: 'Stocks', icon: <TrendingUp size={20} /> },
     { path: '/dashboard/loans', label: 'Loans', icon: <DollarSign size={20} /> },
-    { path: '/dashboard/fds', label: 'Fixed Deposits', icon: <Clock size={20} /> },
+    { path: '/dashboard/fds', label: 'FDs & Savings', icon: <Clock size={20} /> },
   ];
 
   return (
-    <div className="flex min-h-screen text-gray-100 font-sans relative overflow-hidden">
+    <div className="flex h-screen bg-black text-gray-100 font-sans selection:bg-purple-500/30 overflow-hidden relative">
       <AnimatedBackground />
 
       {/* Sidebar */}
       <motion.aside 
         initial={false}
         animate={{ width: isSidebarOpen ? 256 : 80 }}
-        className="bg-black/40 backdrop-blur-xl border-r border-white/5 flex flex-col fixed h-full z-30"
+        className="h-full bg-black/40 backdrop-blur-xl border-r border-white/5 flex flex-col fixed left-0 top-0 z-30 transition-all duration-300"
       >
-        <div className="h-20 flex items-center justify-between px-5 border-b border-white/5">
-          {isSidebarOpen && (
-            <motion.span 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }}
-              className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent"
-            >
-              FinSim
-            </motion.span>
-          )}
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
-          >
+        <div className="h-20 flex items-center justify-between px-6 border-b border-white/5">
+          <div className={`flex items-center space-x-3 overflow-hidden transition-all duration-300 ${!isSidebarOpen && 'opacity-0 w-0'}`}>
+            <User className="h-6 w-6 text-white" />
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">FinSim</span>
+          </div>
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>

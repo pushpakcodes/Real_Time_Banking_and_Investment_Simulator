@@ -63,9 +63,23 @@ const Home = () => {
               </div>
               <div className="flex items-center space-x-6">
                 {user ? (
-                  <GlowingButton onClick={() => navigate('/dashboard')} className="text-sm px-6 py-2">
-                    Dashboard
-                  </GlowingButton>
+                  <>
+                    <GlowingButton onClick={() => navigate('/dashboard')} className="text-sm px-6 py-2">
+                      Dashboard
+                    </GlowingButton>
+                    <button 
+                        onClick={() => {
+                            // Assuming logout function is available in context, otherwise just redirect or clear storage
+                            // For Home.jsx, we might not have logout directly exposed from context in the same way as Layout
+                            // But we can check AuthContext
+                            localStorage.removeItem('token');
+                            window.location.reload(); 
+                        }} 
+                        className="px-6 py-2 rounded-full border border-white/10 hover:bg-white/10 hover:border-white/30 text-white transition-all text-sm font-medium backdrop-blur-sm"
+                    >
+                      Logout
+                    </button>
+                  </>
                 ) : (
                   <>
                     <Link to="/login" className="px-6 py-2 rounded-full border border-white/10 hover:bg-white/10 hover:border-white/30 text-white transition-all text-sm font-medium backdrop-blur-sm">
@@ -112,6 +126,11 @@ const Home = () => {
                   {!user && (
                     <GlowingButton onClick={() => navigate('/register')} className="w-full sm:w-auto px-8 py-4 text-lg">
                       Start Your Journey <ArrowRight className="ml-2 h-5 w-5" />
+                    </GlowingButton>
+                  )}
+                  {user && (
+                     <GlowingButton onClick={() => navigate('/dashboard')} className="w-full sm:w-auto px-8 py-4 text-lg">
+                      Dashboard <ArrowRight className="ml-2 h-5 w-5" />
                     </GlowingButton>
                   )}
                   <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all font-medium backdrop-blur-sm">
