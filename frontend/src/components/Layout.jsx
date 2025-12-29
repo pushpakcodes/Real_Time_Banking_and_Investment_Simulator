@@ -128,6 +128,24 @@ const Layout = () => {
           </div>
 
           <div className="flex items-center space-x-4 bg-black/40 rounded-2xl p-1.5 border border-white/10">
+            <button 
+              onClick={async () => {
+                const amount = prompt('Enter amount to add:');
+                if (!amount) return;
+                try {
+                  const accRes = await api.get('/bank/accounts');
+                  if (accRes.data.length === 0) return alert('Please open a bank account first!');
+                  await api.post('/bank/deposit', { accountId: accRes.data[0]._id, amount });
+                  alert(`Successfully added $${amount} to ${accRes.data[0].bankName}`);
+                  window.location.reload();
+                } catch (err) {
+                  alert('Error: ' + err.message);
+                }
+              }}
+              className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 px-4 py-2 rounded-xl font-medium text-sm transition-all border border-emerald-500/30"
+            >
+              + Add Money
+            </button>
             <div className="flex items-center px-3">
               <input 
                 type="number" 

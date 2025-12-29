@@ -211,4 +211,81 @@ const getStockPrediction = async (req, res) => {
     }
 };
 
-module.exports = { getStocks, getStockDetails, buyStock, sellStock, getPortfolio, getStockPrediction };
+const { fetchStockPrice } = require('../services/alphaVantageService');
+
+// @desc    Search stock price
+// @route   GET /api/stocks/search
+// @access  Private
+const searchStock = async (req, res) => {
+  const { symbol } = req.query;
+  if (!symbol) return res.status(400).json({ message: 'Symbol is required' });
+
+  try {
+    const data = await fetchStockPrice(symbol);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Add existing stock to portfolio (No cost)
+// @route   POST /api/stocks/portfolio/add
+// @access  Private
+const addPortfolioItem = async (req, res) => {
+  const { symbol, quantity, price } = req.body; // price can be passed or fetched
+
+  if (!symbol || !quantity) {
+    return res.status(400).json({ message: 'Symbol and quantity are required' });
+  }
+
+  try {
+    let currentPrice = price;
+    if (!currentPrice) {
+      const data = await fetchStockPrice(symbol);
+      currentPrice = data.price;
+    }
+
+    // Find or Create Stock in DB
+    let stock = await Stock.findOne({ user: req.user._id, symbol: symbol.toUpperCase() });
+    
+    if (!stock) {
+        stock = await Stock.create({
+            user: req.user._id,
+            symbol: symbol.toUpperCase(),
+            name: symbol.toUpperCase(), // Simplification
+            sector: 'Unknown',
+            currentPrice: currentPrice,
+            volatility: 0.02, // Default
+            trend: 'NEUTRAL'
+        });
+    } else {
+        // Update price
+        stock.currentPrice = currentPrice;
+        await stock.save();
+    }
+
+    // Update Portfolio
+    let portfolioItem = await Portfolio.findOne({ user: req.user._id, stock: stock._id });
+    if (portfolioItem) {
+        // Weighted average calculation
+        const totalValue = (portfolioItem.averageBuyPrice * portfolioItem.quantity) + (currentPrice * quantity);
+        portfolioItem.quantity += Number(quantity);
+        portfolioItem.averageBuyPrice = totalValue / portfolioItem.quantity;
+        await portfolioItem.save();
+    } else {
+        await Portfolio.create({
+            user: req.user._id,
+            stock: stock._id,
+            quantity: Number(quantity),
+            averageBuyPrice: currentPrice
+        });
+    }
+
+    res.json({ message: 'Stock added to portfolio successfully' });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getStocks, getStockDetails, buyStock, sellStock, getPortfolio, getStockPrediction, searchStock, addPortfolioItem };

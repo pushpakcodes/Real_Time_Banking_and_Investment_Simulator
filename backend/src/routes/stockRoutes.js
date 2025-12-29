@@ -6,12 +6,16 @@ const {
   buyStock,
   sellStock,
   getPortfolio,
-  getStockPrediction
+  getStockPrediction,
+  searchStock,
+  addPortfolioItem
 } = require('../controllers/stockController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.get('/', protect, getStocks);
 router.get('/portfolio', protect, getPortfolio);
+router.get('/search', protect, searchStock);
+router.post('/portfolio/add', protect, addPortfolioItem);
 router.get('/:id', protect, getStockDetails);
 router.post('/buy', protect, buyStock);
 router.post('/sell', protect, sellStock);

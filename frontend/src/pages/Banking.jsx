@@ -137,14 +137,20 @@ const Banking = () => {
             <form onSubmit={handleCreateAccount} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Bank Name</label>
-                <input 
-                  type="text" 
+                <select 
                   value={newAccName} 
                   onChange={e => setNewAccName(e.target.value)} 
                   required 
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all hover:bg-white/10"
-                  placeholder="e.g. Chase, Wells Fargo"
-                />
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all [&>option]:bg-gray-900"
+                >
+                  <option value="" disabled>Select Bank</option>
+                  <option value="HDFC Bank">HDFC Bank</option>
+                  <option value="SBI Bank">SBI Bank</option>
+                  <option value="Barclays Bank">Barclays Bank</option>
+                  <option value="Deutsche Bank">Deutsche Bank</option>
+                  <option value="Citi Bank">Citi Bank</option>
+                  <option value="JP Morgan Chase & Co">JP Morgan Chase & Co</option>
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

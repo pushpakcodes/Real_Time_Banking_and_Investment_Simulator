@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
-import { TrendingUp, Activity, PieChart } from 'lucide-react';
+import { TrendingUp, Activity, PieChart, Search, Plus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
+import { GlowingButton } from '../components/ui/GlowingButton';
 
 const Stocks = () => {
   const [stocks, setStocks] = useState([]);
@@ -12,6 +13,11 @@ const Stocks = () => {
   const [selectedAccount, setSelectedAccount] = useState('');
   const [prediction, setPrediction] = useState(null);
   const [selectedStockForPred, setSelectedStockForPred] = useState(null);
+  
+  // Search State
+  const [searchSymbol, setSearchSymbol] = useState('');
+  const [searchedStock, setSearchedStock] = useState(null);
+  const [addQty, setAddQty] = useState('');
 
   const fetchData = async () => {
     try {
@@ -32,6 +38,36 @@ const Stocks = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchSymbol) return;
+    try {
+      const { data } = await api.get(`/stocks/search?symbol=${searchSymbol}`);
+      setSearchedStock(data);
+    } catch (err) {
+      alert('Stock not found or API error');
+      setSearchedStock(null);
+    }
+  };
+
+  const handleAddHolding = async () => {
+    if (!searchedStock || !addQty) return;
+    try {
+      await api.post('/stocks/portfolio/add', {
+        symbol: searchedStock.symbol,
+        quantity: addQty,
+        price: searchedStock.price
+      });
+      alert('Added to portfolio!');
+      setSearchSymbol('');
+      setSearchedStock(null);
+      setAddQty('');
+      fetchData();
+    } catch (err) {
+      alert('Error: ' + err.response?.data?.message);
+    }
+  };
 
   const handleBuy = async (stockId) => {
     const qty = prompt('Enter quantity to buy:');
@@ -112,6 +148,57 @@ const Stocks = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Search & Add External Holding */}
+        <GlassCard variants={itemVariants} className="col-span-1 lg:col-span-2">
+          <h3 className="text-xl font-semibold text-gray-200 flex items-center gap-2 mb-4">
+            <Search className="text-blue-400" /> Add External Holding
+          </h3>
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+             <div className="flex-1 w-full">
+                <label className="block text-sm font-medium text-gray-400 mb-1">Search Stock Symbol</label>
+                <div className="flex gap-2">
+                    <input 
+                        type="text" 
+                        value={searchSymbol}
+                        onChange={(e) => setSearchSymbol(e.target.value.toUpperCase())}
+                        placeholder="e.g. IBM, AAPL"
+                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                    <button 
+                        onClick={handleSearch}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl transition-colors"
+                    >
+                        Search
+                    </button>
+                </div>
+             </div>
+
+             {searchedStock && (
+                 <>
+                    <div className="bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                        <p className="text-sm text-gray-400">Current Price</p>
+                        <p className="text-xl font-bold text-emerald-400">${searchedStock.price}</p>
+                    </div>
+                    <div className="w-32">
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Quantity</label>
+                        <input 
+                            type="number" 
+                            value={addQty}
+                            onChange={(e) => setAddQty(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        />
+                    </div>
+                    <GlowingButton 
+                        onClick={handleAddHolding}
+                        className="h-[42px] from-emerald-600 to-teal-600"
+                    >
+                        <Plus size={18} className="mr-1" /> Add
+                    </GlowingButton>
+                 </>
+             )}
+          </div>
+        </GlassCard>
+
         {/* Market Table */}
         <GlassCard variants={itemVariants} className="overflow-hidden p-0">
           <div className="p-6 border-b border-white/10">
