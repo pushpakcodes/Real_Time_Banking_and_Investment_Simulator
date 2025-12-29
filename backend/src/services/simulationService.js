@@ -78,11 +78,15 @@ const advanceSimulation = async (user, days) => {
             loan.remainingBalance -= (loan.emiAmount - (loan.remainingBalance * loan.interestRate / 1200)); // Rough Principal reduction
             if (loan.remainingBalance < 0) loan.remainingBalance = 0;
             
+            // If it was defaulted, maybe restore to ACTIVE if they have funds now? 
+            // For now, let's keep it simple: If they pay, it stays/becomes ACTIVE.
+            if (loan.status === 'DEFAULTED') loan.status = 'ACTIVE';
+
             transactionsToCreate.push({
                 user: userId,
                 account: primaryAccount._id,
                 type: 'EMI',
-                amount: loan.emiAmount,
+                amount: -loan.emiAmount, // Negative for deduction
                 description: `EMI for Loan ${loan._id}`,
                 date: new Date(currentDate)
             });
@@ -91,8 +95,12 @@ const advanceSimulation = async (user, days) => {
                 loan.status = 'CLOSED';
             }
         } else {
-            // Default logic (simplified)
-            // loan.status = 'DEFAULTED'; // Optional
+            // Insufficient Funds Logic
+            console.log(`Loan ${loan._id} defaulted due to insufficient funds.`);
+            loan.status = 'DEFAULTED';
+            
+            // Optional: Add penalty to principal? 
+            // loan.remainingBalance += 500; 
         }
       }
     });

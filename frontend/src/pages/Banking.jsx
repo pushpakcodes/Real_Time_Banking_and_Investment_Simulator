@@ -52,8 +52,8 @@ const Banking = () => {
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/bank/create-account', {
-        accountType: newAccountType,
+      await api.post('/bank/accounts', {
+        type: newAccountType,
         bankName: selectedBank,
         initialDeposit: Number(initialDeposit)
       });
@@ -72,11 +72,11 @@ const Banking = () => {
     try {
       await api.post('/bank/transfer', {
         fromAccountId: selectedAccount._id,
-        toAccountId: transferData.toAccountId,
+        toAccountNumber: transferData.toAccountNumber,
         amount: Number(transferData.amount)
       });
       toast.success('Transfer successful!');
-      setTransferData({ toAccountId: '', amount: '' });
+      setTransferData({ toAccountNumber: '', amount: '' });
       fetchBankingData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Transfer failed');
@@ -137,7 +137,7 @@ const Banking = () => {
                 </div>
                 <div className="mt-4 pt-4 border-t border-white/10">
                   <p className="text-sm text-gray-500">Available Balance</p>
-                  <p className="text-2xl font-bold text-emerald-400">${acc.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-bold text-emerald-400">₹{acc.balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
               </GlassCard>
             ))}
@@ -215,20 +215,20 @@ const Banking = () => {
                 >
                   {accounts.map(acc => (
                     <option key={acc._id} value={acc._id}>
-                      {acc.bankName} - ${acc.balance.toFixed(2)}
+                      {acc.bankName} - ₹{acc.balance.toFixed(2)}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">To Account ID</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">To Account Number</label>
                 <input 
                   type="text" 
-                  value={transferData.toAccountId} 
-                  onChange={e => setTransferData({ ...transferData, toAccountId: e.target.value })} 
+                  value={transferData.toAccountNumber} 
+                  onChange={e => setTransferData({ ...transferData, toAccountNumber: e.target.value })} 
                   required 
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all hover:bg-white/10"
-                  placeholder="Recipient Account ID"
+                  placeholder="Recipient Account Number"
                 />
               </div>
               <div>

@@ -133,12 +133,12 @@ const transferMoney = async (req, res) => {
     return res.status(400).json({ message: 'Amount must be positive' });
   }
 
-  const session = await mongoose.startSession();
+  // NOTE: MongoDB transactions only work on replica sets. 
+  // For this local simulation without a complex DB setup, we'll run operations sequentially.
+  // This is less atomic but functional for a dev environment.
   
   try {
-    session.startTransaction();
-
-    const fromAccount = await BankAccount.findOne({ _id: fromAccountId, user: req.user._id }).session(session);
+    const fromAccount = await BankAccount.findOne({ _id: fromAccountId, user: req.user._id });
     if (!fromAccount) {
       throw new Error('Source account not found');
     }
@@ -147,58 +147,47 @@ const transferMoney = async (req, res) => {
       throw new Error('Insufficient funds');
     }
 
-    const toAccount = await BankAccount.findOne({ accountNumber: toAccountNumber }).session(session);
+    const toAccount = await BankAccount.findOne({ accountNumber: toAccountNumber });
     if (!toAccount) {
       throw new Error('Destination account not found');
     }
 
     // Deduct from source
     fromAccount.balance -= Number(amount);
-    await fromAccount.save({ session });
+    await fromAccount.save();
 
     // Add to destination
     toAccount.balance += Number(amount);
-    await toAccount.save({ session });
+    await toAccount.save();
 
     // Log transaction for sender
-    await Transaction.create([{
+    await Transaction.create({
       user: req.user._id,
       account: fromAccount._id,
       type: 'TRANSFER',
-      amount: -amount, // Negative for sender in some logic, but here we use type to distinguish. 
-      // Actually, let's keep amount positive and rely on type, or make it negative. 
-      // Standard is usually: DEPOSIT (+), WITHDRAWAL (-). TRANSFER can be split into two entries.
-      // Let's store absolute amount and handle sign in UI or have 'DEBIT'/'CREDIT' subtypes. 
-      // But adhering to my schema: 'TRANSFER'
+      amount: -amount,
       description: `Transfer to ${toAccount.bankName} (${toAccount.accountNumber})`,
       relatedAccount: toAccount._id,
       date: req.user.simulationDate || Date.now()
-    }], { session });
+    });
 
     // Log transaction for receiver
-    await Transaction.create([{
-      user: toAccount.user, // Might be different user
+    await Transaction.create({
+      user: toAccount.user,
       account: toAccount._id,
       type: 'TRANSFER',
       amount: amount,
       description: `Transfer from ${fromAccount.bankName} (${fromAccount.accountNumber})`,
       relatedAccount: fromAccount._id,
-      date: req.user.simulationDate || Date.now() // Use sender's simulation date? Or receiver's? 
-      // In a single-player simulation, usually users are isolated. But if transferring between own accounts, it's fine.
-      // If transferring to another user, their simulation time might be different. 
-      // For now, assume transfer between own accounts or strict isolation (cannot transfer to other users).
-      // Requirement: "Transfer internally". It implies own accounts. 
-      // "Open accounts in multiple banks... Transfer internally". 
-    }], { session });
+      date: req.user.simulationDate || Date.now()
+    });
 
-    await session.commitTransaction();
     res.json({ message: 'Transfer successful' });
 
   } catch (error) {
-    await session.abortTransaction();
+    // If it fails halfway, we might have inconsistent state (e.g. money deducted but not added).
+    // In a real app, use transactions. Here, we accept the risk for ease of local setup.
     res.status(400).json({ message: error.message });
-  } finally {
-    session.endSession();
   }
 };
 

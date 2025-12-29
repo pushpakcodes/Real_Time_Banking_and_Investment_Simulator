@@ -144,7 +144,7 @@ const Stocks = () => {
             className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 [&>option]:bg-gray-900"
           >
             {accounts.map(a => (
-              <option key={a._id} value={a._id}>{a.bankName} (${a.balance.toFixed(2)})</option>
+              <option key={a._id} value={a._id}>{a.bankName} (₹{a.balance.toFixed(2)})</option>
             ))}
           </select>
         </motion.div>
@@ -180,7 +180,7 @@ const Stocks = () => {
                  <>
                     <div className="bg-white/5 px-4 py-2 rounded-xl border border-white/10">
                         <p className="text-sm text-gray-400">Current Price</p>
-                        <p className="text-xl font-bold text-emerald-400">${searchedStock.price}</p>
+                        <p className="text-xl font-bold text-emerald-400">₹{searchedStock.price}</p>
                     </div>
                     <div className="w-32">
                         <label className="block text-sm font-medium text-gray-400 mb-1">Quantity</label>
@@ -223,7 +223,7 @@ const Stocks = () => {
                 {stocks.map(s => (
                   <tr key={s._id} className="group hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4 font-medium text-white">{s.symbol}</td>
-                    <td className="px-6 py-4 text-right text-emerald-400 font-mono">${s.currentPrice.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-right text-emerald-400 font-mono">₹{s.currentPrice.toFixed(2)}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.trend === 'UP' ? 'bg-emerald-500/20 text-emerald-400' : s.trend === 'DOWN' ? 'bg-red-500/20 text-red-400' : 'bg-gray-600/20 text-gray-400'}`}>
                         {s.trend}
@@ -313,7 +313,18 @@ const Stocks = () => {
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={prediction.predictions.map((p, i) => ({ day: i+1, price: p }))}>
+              <LineChart data={prediction.predictions.map((p, i) => ({ 
+                  day: i+1, 
+                  price: p.expectedPrice, 
+                  upper: p.upperBound, 
+                  lower: p.lowerBound 
+              }))}>
+                <defs>
+                  <linearGradient id="confidenceFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <XAxis 
                     dataKey="day" 
                     stroke="#9ca3af" 
@@ -328,7 +339,7 @@ const Stocks = () => {
                     tick={{fill: '#9ca3af', fontSize: 12}}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(val) => `$${val}`}
+                    tickFormatter={(val) => `₹${val.toFixed(0)}`}
                 />
                 <Tooltip 
                   contentStyle={{ 
@@ -339,8 +350,11 @@ const Stocks = () => {
                     color: '#fff' 
                   }}
                   itemStyle={{ color: '#fff' }}
+                  formatter={(value) => [`₹${Number(value).toFixed(2)}`, '']}
                 />
-                <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={3} dot={false} activeDot={{r: 6}} />
+                <Area type="monotone" dataKey="upper" stroke="none" fill="url(#confidenceFill)" />
+                <Area type="monotone" dataKey="lower" stroke="none" fill="url(#confidenceFill)" />
+                <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={3} dot={false} activeDot={{r: 6}} name="Forecast" />
               </LineChart>
             </ResponsiveContainer>
           </div>
