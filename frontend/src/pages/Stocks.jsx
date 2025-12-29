@@ -265,15 +265,15 @@ const Stocks = () => {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {portfolio.map(p => {
-                  const currentPrice = stocks.find(s => s._id === p.stock)?._id ? stocks.find(s => s._id === p.stock).currentPrice : 0;
-                  const pl = (currentPrice - p.averagePrice) * p.quantity;
+                  const currentPrice = p.stock.currentPrice || 0;
+                  const pl = (currentPrice - p.averageBuyPrice) * p.quantity;
                   return (
                     <tr key={p._id} className="group hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 font-medium text-white">{p.stock.symbol}</td>
                       <td className="px-6 py-4 text-right text-gray-300">{p.quantity}</td>
-                      <td className="px-6 py-4 text-right text-gray-300">${p.averagePrice.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-right text-gray-300">₹{p.averageBuyPrice.toFixed(2)}</td>
                       <td className={`px-6 py-4 text-right font-medium ${pl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {pl >= 0 ? '+' : ''}{pl.toFixed(2)}
+                        {pl >= 0 ? '+' : ''}₹{pl.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button 
