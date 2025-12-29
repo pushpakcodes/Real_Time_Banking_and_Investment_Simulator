@@ -88,20 +88,70 @@ const getStockDetails = async (req, res) => {
   }
 };
 
-// @desc    Buy stock
+// @desc    Buy stock (by ID or Symbol)
 // @route   POST /api/stocks/buy
 // @access  Private
 const buyStock = async (req, res) => {
-  const { stockId, quantity, accountId } = req.body;
+  const { stockId, symbol, quantity, accountId } = req.body;
 
   if (quantity <= 0) return res.status(400).json({ message: 'Quantity must be positive' });
 
   try {
-    let stock = await Stock.findOne({ _id: stockId, user: req.user._id });
-    if (!stock) return res.status(404).json({ message: 'Stock not found' });
+    let stock;
+    
+    // Case 1: Buy by ID (Existing stock)
+    if (stockId) {
+        stock = await Stock.findOne({ _id: stockId, user: req.user._id });
+        if (!stock) return res.status(404).json({ message: 'Stock not found' });
+        // Ensure price is fresh
+        stock = await ensureStockUpdated(stock);
+    } 
+    // Case 2: Buy by Symbol (New or Existing stock)
+    else if (symbol) {
+        // Check if it exists first
+        stock = await Stock.findOne({ user: req.user._id, symbol: symbol.toUpperCase() });
+        
+        if (stock) {
+            stock = await ensureStockUpdated(stock);
+        } else {
+            // Fetch and Create (Logic from addPortfolioItem)
+            const data = await getLatestPrice(symbol);
+            const currentPrice = data.price;
+            const historyData = await getHistoricalData(symbol);
 
-    // Ensure price is fresh for transaction
-    stock = await ensureStockUpdated(stock);
+            let volatility = 0.02;
+            let trend = 'NEUTRAL';
+            let growthBias = 0;
+
+            if (historyData.length > 1) {
+                 const closes = historyData.map(h => h.close);
+                 const returns = [];
+                 for(let i=1; i<closes.length; i++) {
+                     returns.push(Math.log(closes[i] / closes[i-1]));
+                 }
+                 const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+                 const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+                 volatility = Math.sqrt(variance);
+                 growthBias = mean;
+                 trend = mean > 0.0005 ? 'BULLISH' : (mean < -0.0005 ? 'BEARISH' : 'NEUTRAL');
+            }
+
+            stock = await Stock.create({
+                user: req.user._id,
+                symbol: symbol.toUpperCase(),
+                name: symbol.toUpperCase(),
+                sector: 'Unknown',
+                currentPrice: currentPrice,
+                volatility: volatility,
+                trend: trend,
+                growthBias: growthBias,
+                lastUpdated: Date.now(),
+                history: historyData
+            });
+        }
+    } else {
+        return res.status(400).json({ message: 'Stock ID or Symbol required' });
+    }
 
     const account = await BankAccount.findOne({ _id: accountId, user: req.user._id });
     if (!account) return res.status(404).json({ message: 'Account not found' });
@@ -114,7 +164,7 @@ const buyStock = async (req, res) => {
     await account.save();
 
     // Add to portfolio
-    let portfolioItem = await Portfolio.findOne({ user: req.user._id, stock: stockId });
+    let portfolioItem = await Portfolio.findOne({ user: req.user._id, stock: stock._id });
     if (portfolioItem) {
       // Calculate new average price
       const totalValue = (portfolioItem.averageBuyPrice * portfolioItem.quantity) + cost;
@@ -124,7 +174,7 @@ const buyStock = async (req, res) => {
     } else {
       await Portfolio.create({
         user: req.user._id,
-        stock: stockId,
+        stock: stock._id,
         quantity,
         averageBuyPrice: stock.currentPrice
       });
@@ -140,7 +190,7 @@ const buyStock = async (req, res) => {
       date: req.user.simulationDate || Date.now()
     });
 
-    res.json({ message: 'Stock bought successfully' });
+    res.json({ message: 'Stock bought successfully', stock, newBalance: account.balance });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

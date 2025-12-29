@@ -19,6 +19,11 @@ const Stocks = () => {
   const [searchSymbol, setSearchSymbol] = useState('');
   const [searchedStock, setSearchedStock] = useState(null);
   const [addQty, setAddQty] = useState('');
+  
+  // Sell Modal State
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [sellStockId, setSellStockId] = useState(null);
+  const [sellQty, setSellQty] = useState('');
 
   const { toast } = useToast();
 
@@ -57,12 +62,12 @@ const Stocks = () => {
   const handleAddHolding = async () => {
     if (!searchedStock || !addQty) return;
     try {
-      await api.post('/stocks/portfolio/add', {
+      await api.post('/stocks/buy', {
         symbol: searchedStock.symbol,
         quantity: addQty,
-        price: searchedStock.price
+        accountId: selectedAccount
       });
-      toast.success('Added to portfolio!');
+      toast.success(`Bought ${addQty} ${searchedStock.symbol} successfully!`);
       setSearchSymbol('');
       setSearchedStock(null);
       setAddQty('');
@@ -88,16 +93,24 @@ const Stocks = () => {
     }
   };
 
-  const handleSell = async (stockId) => {
-    const qty = prompt('Enter quantity to sell:');
-    if (!qty) return;
+  const openSellModal = (stockId) => {
+    setSellStockId(stockId);
+    setSellQty('');
+    setShowSellModal(true);
+  };
+
+  const confirmSell = async () => {
+    if (!sellQty || !sellStockId) return;
     try {
       await api.post('/stocks/sell', {
-        stockId,
-        quantity: qty,
+        stockId: sellStockId,
+        quantity: sellQty,
         accountId: selectedAccount
       });
       toast.success('Sold successfully!');
+      setShowSellModal(false);
+      setSellStockId(null);
+      setSellQty('');
       fetchData();
     } catch (err) {
       toast.error('Error: ' + err.response?.data?.message);
@@ -147,14 +160,15 @@ const Stocks = () => {
               <option key={a._id} value={a._id}>{a.bankName} (₹{a.balance.toFixed(2)})</option>
             ))}
           </select>
-        </motion.div>
+
+    </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Search & Add External Holding */}
+        {/* Search & Buy Stocks */}
         <GlassCard variants={itemVariants} className="col-span-1 lg:col-span-2">
           <h3 className="text-xl font-semibold text-gray-200 flex items-center gap-2 mb-4">
-            <Search className="text-blue-400" /> Add External Holding
+            <Search className="text-blue-400" /> Search & Buy Stocks
           </h3>
           <div className="flex flex-col md:flex-row gap-4 items-end">
              <div className="flex-1 w-full">
@@ -195,7 +209,7 @@ const Stocks = () => {
                         onClick={handleAddHolding}
                         className="h-[42px] from-emerald-600 to-teal-600"
                     >
-                        <Plus size={18} className="mr-1" /> Add
+                        <Plus size={18} className="mr-1" /> Buy
                     </GlowingButton>
                  </>
              )}
@@ -277,7 +291,7 @@ const Stocks = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button 
-                          onClick={() => handleSell(p.stock._id)} 
+                          onClick={() => openSellModal(p.stock._id)} 
                           className="bg-red-600/80 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm transition-all border border-red-500/50"
                         >
                           Sell
@@ -375,6 +389,44 @@ const Stocks = () => {
             </div>
           </div>
         </GlassCard>
+      )}
+
+      {/* Sell Modal */}
+      {showSellModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-xl"
+          >
+            <h3 className="text-xl font-bold text-white mb-4">Sell Stock</h3>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-400 mb-2">Quantity to Sell</label>
+              <input 
+                type="number" 
+                value={sellQty}
+                onChange={(e) => setSellQty(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 text-lg"
+                placeholder="0"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowSellModal(false)}
+                className="flex-1 px-4 py-2 rounded-xl bg-white/5 text-gray-300 hover:bg-white/10 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmSell}
+                className="flex-1 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white transition-colors font-medium"
+              >
+                Confirm Sell
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </motion.div>
   );
