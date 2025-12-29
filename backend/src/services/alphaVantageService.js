@@ -9,11 +9,21 @@ const fetchStockPrice = async (symbol) => {
     const data = response.data['Global Quote'];
 
     if (!data || Object.keys(data).length === 0) {
-      // Fallback for demo key limitation or invalid symbol
-      // If demo key is used, it only works for IBM. 
-      // If symbol is not IBM and key is demo, we might get empty result or error.
-      // We will throw error to let user know.
-      throw new Error('Stock not found or API limit reached');
+      // Fallback for demo key limitation: Generate a realistic mock price
+      // so the user can still simulate with any symbol.
+      console.warn(`Alpha Vantage limit reached or symbol ${symbol} not found. Using simulation fallback.`);
+      
+      // Deterministic random based on symbol characters to be consistent-ish
+      const seed = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const mockPrice = (seed % 500) + 50 + (Math.random() * 10); // Price between 50 and 550
+      const mockChange = (Math.random() * 5 - 2.5).toFixed(2) + '%';
+
+      return {
+        symbol: symbol.toUpperCase(),
+        price: parseFloat(mockPrice.toFixed(2)),
+        changePercent: mockChange,
+        isSimulated: true // Flag to indicate this is not live data
+      };
     }
 
     const price = parseFloat(data['05. price']);
@@ -26,7 +36,14 @@ const fetchStockPrice = async (symbol) => {
     };
   } catch (error) {
     console.error(`Alpha Vantage API Error for ${symbol}:`, error.message);
-    throw new Error('Failed to fetch stock price');
+    
+    // Final fallback if network error
+    return {
+        symbol: symbol.toUpperCase(),
+        price: (Math.random() * 200 + 100).toFixed(2), // Random price
+        changePercent: '0.00%',
+        isSimulated: true
+    };
   }
 };
 

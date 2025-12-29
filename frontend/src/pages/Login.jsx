@@ -1,5 +1,6 @@
 import { useState, useContext } from 'react';
 import AuthContext from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { TrendingUp, Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -11,17 +12,19 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useContext(AuthContext);
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await login(email, password);
+      toast.success('Login successful!');
       navigate('/dashboard');
     } catch (err) {
       console.error('Login Error:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Login failed';
-      alert(`Error: ${errorMessage}`);
+      toast.error(errorMessage);
     }
   };
 

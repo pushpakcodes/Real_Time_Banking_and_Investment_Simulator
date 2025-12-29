@@ -1,5 +1,6 @@
 import { useState, useContext } from 'react';
 import AuthContext from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { TrendingUp, Lock, Mail, User } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -12,17 +13,19 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { register } = useContext(AuthContext);
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await register(username, email, password);
-      navigate('/dashboard');
+      toast.success('Registration successful! Please login.');
+      navigate('/login');
     } catch (err) {
       console.error('Registration Error:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Registration failed';
-      alert(`Error: ${errorMessage}`);
+      toast.error(errorMessage);
     }
   };
 

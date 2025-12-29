@@ -1,28 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
-import { Wallet, PlusCircle, ArrowRightLeft, CreditCard } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useToast } from '../context/ToastContext';
+import { Wallet, CreditCard, ArrowRightLeft, Building2, Plus, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
 import { GlowingButton } from '../components/ui/GlowingButton';
 
 const Banking = () => {
   const [accounts, setAccounts] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newAccountType, setNewAccountType] = useState('Savings');
+  const [selectedBank, setSelectedBank] = useState('HDFC Bank');
+  const [initialDeposit, setInitialDeposit] = useState('');
+  const [transferData, setTransferData] = useState({ toAccountId: '', amount: '' });
+  const [selectedAccount, setSelectedAccount] = useState(null);
   
-  // Forms state
-  const [newAccName, setNewAccName] = useState('');
-  const [newAccType, setNewAccType] = useState('Savings');
-  const [newAccDeposit, setNewAccDeposit] = useState(1000);
+  const { toast } = useToast();
 
-  const [transferFrom, setTransferFrom] = useState('');
-  const [transferToAccNum, setTransferToAccNum] = useState('');
-  const [transferAmount, setTransferAmount] = useState(0);
+  const banks = [
+    "HDFC Bank",
+    "SBI Bank",
+    "Barclays Bank",
+    "Deutsche Bank",
+    "Citi Bank",
+    "JP Morgan Chase & Co"
+  ];
 
-  const fetchAccounts = async () => {
+  const fetchBankingData = async () => {
     try {
-      const { data } = await api.get('/bank/accounts');
-      setAccounts(data);
-      if (data.length > 0 && !transferFrom) setTransferFrom(data[0]._id);
+      const accRes = await api.get('/bank/accounts');
+      setAccounts(accRes.data);
+      if (accRes.data.length > 0 && !selectedAccount) {
+        setSelectedAccount(accRes.data[0]);
+      }
+      
+      const txRes = await api.get('/bank/transactions');
+      setTransactions(txRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -31,37 +46,40 @@ const Banking = () => {
   };
 
   useEffect(() => {
-    fetchAccounts();
+    fetchBankingData();
   }, []);
 
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/bank/accounts', {
-        bankName: newAccName,
-        type: newAccType,
-        initialDeposit: newAccDeposit
+      await api.post('/bank/create-account', {
+        accountType: newAccountType,
+        bankName: selectedBank,
+        initialDeposit: Number(initialDeposit)
       });
-      alert('Account created!');
-      setNewAccName('');
-      fetchAccounts();
+      toast.success('Account created successfully!');
+      setShowCreateForm(false);
+      setInitialDeposit('');
+      fetchBankingData();
     } catch (err) {
-      alert('Error: ' + err.response?.data?.message);
+      toast.error(err.response?.data?.message || 'Error creating account');
     }
   };
 
   const handleTransfer = async (e) => {
     e.preventDefault();
+    if (!selectedAccount) return;
     try {
       await api.post('/bank/transfer', {
-        fromAccountId: transferFrom,
-        toAccountNumber: transferToAccNum,
-        amount: transferAmount
+        fromAccountId: selectedAccount._id,
+        toAccountId: transferData.toAccountId,
+        amount: Number(transferData.amount)
       });
-      alert('Transfer successful!');
-      fetchAccounts();
+      toast.success('Transfer successful!');
+      setTransferData({ toAccountId: '', amount: '' });
+      fetchBankingData();
     } catch (err) {
-      alert('Error: ' + err.response?.data?.message);
+      toast.error(err.response?.data?.message || 'Transfer failed');
     }
   };
 
@@ -132,32 +150,28 @@ const Banking = () => {
           {/* Open Account Form */}
           <GlassCard variants={itemVariants}>
             <h3 className="text-xl font-semibold text-gray-200 mb-6 flex items-center gap-2">
-              <PlusCircle className="text-blue-400" /> Open New Account
+              <Plus className="text-blue-400" /> Open New Account
             </h3>
             <form onSubmit={handleCreateAccount} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Bank Name</label>
                 <select 
-                  value={newAccName} 
-                  onChange={e => setNewAccName(e.target.value)} 
+                  value={selectedBank} 
+                  onChange={e => setSelectedBank(e.target.value)} 
                   required 
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all [&>option]:bg-gray-900"
                 >
-                  <option value="" disabled>Select Bank</option>
-                  <option value="HDFC Bank">HDFC Bank</option>
-                  <option value="SBI Bank">SBI Bank</option>
-                  <option value="Barclays Bank">Barclays Bank</option>
-                  <option value="Deutsche Bank">Deutsche Bank</option>
-                  <option value="Citi Bank">Citi Bank</option>
-                  <option value="JP Morgan Chase & Co">JP Morgan Chase & Co</option>
+                  {banks.map((bank) => (
+                    <option key={bank} value={bank}>{bank}</option>
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-1">Type</label>
                   <select 
-                    value={newAccType} 
-                    onChange={e => setNewAccType(e.target.value)} 
+                    value={newAccountType} 
+                    onChange={e => setNewAccountType(e.target.value)} 
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all [&>option]:bg-gray-900"
                   >
                     <option value="Savings">Savings</option>
@@ -168,8 +182,8 @@ const Banking = () => {
                   <label className="block text-sm font-medium text-gray-400 mb-1">Initial Deposit</label>
                   <input 
                     type="number" 
-                    value={newAccDeposit} 
-                    onChange={e => setNewAccDeposit(e.target.value)} 
+                    value={initialDeposit} 
+                    onChange={e => setInitialDeposit(e.target.value)} 
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all hover:bg-white/10"
                   />
                 </div>
@@ -192,8 +206,11 @@ const Banking = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">From Account</label>
                 <select 
-                  value={transferFrom} 
-                  onChange={e => setTransferFrom(e.target.value)} 
+                  value={selectedAccount ? selectedAccount._id : ''}
+                  onChange={e => {
+                    const acc = accounts.find(a => a._id === e.target.value);
+                    setSelectedAccount(acc);
+                  }}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all [&>option]:bg-gray-900"
                 >
                   {accounts.map(acc => (
@@ -204,22 +221,22 @@ const Banking = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">To Account Number</label>
+                <label className="block text-sm font-medium text-gray-400 mb-1">To Account ID</label>
                 <input 
                   type="text" 
-                  value={transferToAccNum} 
-                  onChange={e => setTransferToAccNum(e.target.value)} 
+                  value={transferData.toAccountId} 
+                  onChange={e => setTransferData({ ...transferData, toAccountId: e.target.value })} 
                   required 
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all hover:bg-white/10"
-                  placeholder="Recipient Account #"
+                  placeholder="Recipient Account ID"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">Amount</label>
                 <input 
                   type="number" 
-                  value={transferAmount} 
-                  onChange={e => setTransferAmount(e.target.value)} 
+                  value={transferData.amount} 
+                  onChange={e => setTransferData({ ...transferData, amount: e.target.value })} 
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all hover:bg-white/10"
                 />
               </div>

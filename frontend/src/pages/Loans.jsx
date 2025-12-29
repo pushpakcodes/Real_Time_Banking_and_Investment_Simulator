@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
+import { useToast } from '../context/ToastContext';
 import { DollarSign, Briefcase, GraduationCap, Home } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
@@ -15,6 +16,8 @@ const Loans = () => {
   const [amount, setAmount] = useState(10000);
   const [tenure, setTenure] = useState(12);
   const [accountId, setAccountId] = useState('');
+
+  const { toast } = useToast();
 
   const fetchData = async () => {
     try {
@@ -38,10 +41,10 @@ const Loans = () => {
     e.preventDefault();
     try {
       await api.post('/loans/apply', { type, amount, tenureMonths: tenure, accountId });
-      alert('Loan Disbursed!');
+      toast.success('Loan Disbursed successfully!');
       fetchData();
     } catch (err) {
-      alert('Error: ' + err.response?.data?.message);
+      toast.error('Error: ' + err.response?.data?.message);
     }
   };
 

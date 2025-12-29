@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import api from '../api';
 import { LayoutDashboard, Wallet, TrendingUp, DollarSign, Clock, LogOut, Menu, X, Play, User } from 'lucide-react';
 import { AnimatedBackground } from './ui/AnimatedBackground';
@@ -8,9 +9,10 @@ import { motion } from 'framer-motion';
 
 const Layout = () => {
   const { user, logout, refreshProfile } = useContext(AuthContext);
+  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const [simDays, setSimDays] = useState(1);
+  const [simMonths, setSimMonths] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const handleLogout = () => {
@@ -20,12 +22,14 @@ const Layout = () => {
 
   const handleSimulate = async () => {
     try {
-      const { data } = await api.post('/simulate/advance', { days: simDays });
-      alert(data.message);
+      // Convert months to days (approx 30 days per month)
+      const days = simMonths * 30;
+      const { data } = await api.post('/simulate/advance', { days });
+      toast.success(data.message || `Simulated ${simMonths} months successfully!`);
       refreshProfile(); 
       window.location.reload(); 
     } catch (err) {
-      alert('Simulation failed: ' + (err.response?.data?.message || err.message));
+      toast.error('Simulation failed: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -126,27 +130,31 @@ const Layout = () => {
                 if (!amount) return;
                 try {
                   const accRes = await api.get('/bank/accounts');
-                  if (accRes.data.length === 0) return alert('Please open a bank account first!');
+                  if (accRes.data.length === 0) return toast.error('Please open a bank account first!');
                   await api.post('/bank/deposit', { accountId: accRes.data[0]._id, amount });
-                  alert(`Successfully added $${amount} to ${accRes.data[0].bankName}`);
+                  toast.success(`Successfully added $${amount} to ${accRes.data[0].bankName}`);
                   window.location.reload();
                 } catch (err) {
-                  alert('Error: ' + err.message);
+                  toast.error('Error: ' + err.message);
                 }
               }}
               className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 px-4 py-2 rounded-xl font-medium text-sm transition-all border border-emerald-500/30"
             >
               + Add Money
             </button>
-            <div className="flex items-center px-3">
-              <input 
-                type="number" 
-                min="1" 
-                value={simDays} 
-                onChange={(e) => setSimDays(e.target.value)} 
-                className="bg-transparent text-white w-12 text-center focus:outline-none font-bold"
-              />
-              <span className="text-gray-500 text-sm ml-1">Days</span>
+            <div className="flex items-center px-3 border-l border-white/10 ml-2 pl-4">
+              <select 
+                value={simMonths} 
+                onChange={(e) => setSimMonths(Number(e.target.value))}
+                className="bg-transparent border-none text-white text-sm focus:outline-none cursor-pointer"
+              >
+                <option value={1} className="bg-gray-900">1 Month</option>
+                <option value={3} className="bg-gray-900">3 Months</option>
+                <option value={6} className="bg-gray-900">6 Months</option>
+                <option value={12} className="bg-gray-900">1 Year</option>
+                <option value={24} className="bg-gray-900">2 Years</option>
+                <option value={60} className="bg-gray-900">5 Years</option>
+              </select>
             </div>
             <button 
               onClick={handleSimulate}

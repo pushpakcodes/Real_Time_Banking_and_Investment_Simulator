@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
+import { useToast } from '../context/ToastContext';
 import { TrendingUp, Activity, PieChart, Search, Plus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
@@ -18,6 +19,8 @@ const Stocks = () => {
   const [searchSymbol, setSearchSymbol] = useState('');
   const [searchedStock, setSearchedStock] = useState(null);
   const [addQty, setAddQty] = useState('');
+
+  const { toast } = useToast();
 
   const fetchData = async () => {
     try {
@@ -46,7 +49,7 @@ const Stocks = () => {
       const { data } = await api.get(`/stocks/search?symbol=${searchSymbol}`);
       setSearchedStock(data);
     } catch (err) {
-      alert('Stock not found or API error');
+      toast.error('Stock not found or API error');
       setSearchedStock(null);
     }
   };
@@ -59,13 +62,13 @@ const Stocks = () => {
         quantity: addQty,
         price: searchedStock.price
       });
-      alert('Added to portfolio!');
+      toast.success('Added to portfolio!');
       setSearchSymbol('');
       setSearchedStock(null);
       setAddQty('');
       fetchData();
     } catch (err) {
-      alert('Error: ' + err.response?.data?.message);
+      toast.error('Error: ' + err.response?.data?.message);
     }
   };
 
@@ -78,10 +81,10 @@ const Stocks = () => {
         quantity: qty,
         accountId: selectedAccount
       });
-      alert('Bought successfully!');
+      toast.success('Bought successfully!');
       fetchData();
     } catch (err) {
-      alert('Error: ' + err.response?.data?.message);
+      toast.error('Error: ' + err.response?.data?.message);
     }
   };
 
@@ -94,10 +97,10 @@ const Stocks = () => {
         quantity: qty,
         accountId: selectedAccount
       });
-      alert('Sold successfully!');
+      toast.success('Sold successfully!');
       fetchData();
     } catch (err) {
-      alert('Error: ' + err.response?.data?.message);
+      toast.error('Error: ' + err.response?.data?.message);
     }
   };
 
@@ -107,7 +110,7 @@ const Stocks = () => {
       const { data } = await api.get(`/stocks/${stock._id}/prediction?days=30`);
       setPrediction(data);
     } catch (err) {
-      alert('Error fetching prediction');
+      toast.error('Error fetching prediction');
     }
   };
 

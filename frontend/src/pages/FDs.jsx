@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
+import { useToast } from '../context/ToastContext';
 import { Lock, Clock, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
@@ -14,6 +15,8 @@ const FDs = () => {
   const [amount, setAmount] = useState(5000);
   const [tenure, setTenure] = useState(1);
   const [accountId, setAccountId] = useState('');
+
+  const { toast } = useToast();
 
   const fetchData = async () => {
     try {
@@ -37,10 +40,10 @@ const FDs = () => {
     e.preventDefault();
     try {
       await api.post('/fds/create', { amount, tenureYears: tenure, accountId });
-      alert('FD Created!');
+      toast.success('Fixed Deposit created successfully!');
       fetchData();
     } catch (err) {
-      alert('Error: ' + err.response?.data?.message);
+      toast.error('Error: ' + err.response?.data?.message);
     }
   };
 

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useContext } from 'react';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import AuthContext from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -23,21 +24,23 @@ const PrivateRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          <Route path="/dashboard" element={<PrivateRoute><Layout /></PrivateRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="banking" element={<Banking />} />
-            <Route path="stocks" element={<Stocks />} />
-            <Route path="loans" element={<Loans />} />
-            <Route path="fds" element={<FDs />} />
-          </Route>
-        </Routes>
-      </Router>
+      <ToastProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            <Route path="/dashboard" element={<PrivateRoute><Layout /></PrivateRoute>}>
+              <Route index element={<Dashboard />} />
+              <Route path="banking" element={<Banking />} />
+              <Route path="stocks" element={<Stocks />} />
+              <Route path="loans" element={<Loans />} />
+              <Route path="fds" element={<FDs />} />
+            </Route>
+          </Routes>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }
