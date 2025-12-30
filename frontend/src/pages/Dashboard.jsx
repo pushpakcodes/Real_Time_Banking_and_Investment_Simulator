@@ -3,7 +3,7 @@ import api from '../api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
-import { TrendingUp, DollarSign, Briefcase } from 'lucide-react';
+import { TrendingUp, IndianRupee, Briefcase } from 'lucide-react';
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
@@ -69,7 +69,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                     <p className="text-gray-400 text-sm">Net Worth</p>
-                    <p className="text-2xl font-bold text-white">${latest.netWorth?.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-white">₹{latest.netWorth?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
         </GlassCard>
@@ -77,11 +77,11 @@ const Dashboard = () => {
         <GlassCard variants={itemVariants} className="bg-blue-500/10 border-blue-500/20">
             <div className="flex items-center space-x-4">
                 <div className="p-3 bg-blue-500/20 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-blue-400" />
+                    <IndianRupee className="h-6 w-6 text-blue-400" />
                 </div>
                 <div>
                     <p className="text-gray-400 text-sm">Bank Balance</p>
-                    <p className="text-2xl font-bold text-white">${latest.totalBankBalance?.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-white">₹{latest.totalBankBalance?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
         </GlassCard>
@@ -93,7 +93,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                     <p className="text-gray-400 text-sm">Stock Value</p>
-                    <p className="text-2xl font-bold text-white">${latest.totalStockValue?.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-white">₹{latest.totalStockValue?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
         </GlassCard>
@@ -119,7 +119,7 @@ const Dashboard = () => {
                 tick={{fill: '#9ca3af', fontSize: 12}}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => `$${value/1000}k`}
+                tickFormatter={(value) => `₹${Math.round(value/1000)}k`}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -130,6 +130,7 @@ const Dashboard = () => {
                     color: '#fff' 
                 }}
                 itemStyle={{ color: '#fff' }}
+                formatter={(value, name) => [`₹${Number(value).toFixed(2)}`, name]}
               />
               <Legend wrapperStyle={{paddingTop: '20px'}} />
               <Line type="monotone" dataKey="netWorth" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{r: 6}} name="Net Worth" />

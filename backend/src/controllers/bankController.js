@@ -1,6 +1,8 @@
 const BankAccount = require('../models/BankAccount');
 const Transaction = require('../models/Transaction');
 const mongoose = require('mongoose');
+const User = require('../models/User');
+const { computeNetWorth } = require('../services/netWorthService');
 
 // @desc    Create a new bank account
 // @route   POST /api/bank/accounts
@@ -49,6 +51,29 @@ const getBankAccounts = async (req, res) => {
   }
 };
 
+// @desc    Set or update monthly deposit plan
+// @route   POST /api/bank/deposit-plan
+// @access  Private
+const setMonthlyDepositPlan = async (req, res) => {
+  const { accountId, amount, dayOfMonth, active } = req.body;
+  if (!accountId) return res.status(400).json({ message: 'Account ID required' });
+  if (amount !== undefined && amount < 0) return res.status(400).json({ message: 'Amount must be non-negative' });
+  if (dayOfMonth !== undefined && (dayOfMonth < 1 || dayOfMonth > 31)) return res.status(400).json({ message: 'dayOfMonth must be 1-31' });
+  try {
+    const account = await BankAccount.findOne({ _id: accountId, user: req.user._id });
+    if (!account) return res.status(404).json({ message: 'Account not found' });
+    account.monthlyDeposit = {
+      amount: amount !== undefined ? Number(amount) : (account.monthlyDeposit?.amount || 0),
+      dayOfMonth: dayOfMonth !== undefined ? Number(dayOfMonth) : (account.monthlyDeposit?.dayOfMonth || 1),
+      active: active !== undefined ? !!active : true
+    };
+    await account.save();
+    res.json({ message: 'Monthly deposit plan updated', plan: account.monthlyDeposit });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Deposit money
 // @route   POST /api/bank/deposit
 // @access  Private
@@ -78,6 +103,8 @@ const depositMoney = async (req, res) => {
       date: req.user.simulationDate || Date.now()
     });
 
+    const breakdown = await computeNetWorth(req.user._id, 'LIVE');
+    await User.findByIdAndUpdate(req.user._id, { virtualNetWorth: breakdown.netWorth });
     res.json({ message: 'Deposit successful', newBalance: account.balance });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -117,6 +144,8 @@ const withdrawMoney = async (req, res) => {
       date: req.user.simulationDate || Date.now()
     });
 
+    const breakdown = await computeNetWorth(req.user._id, 'LIVE');
+    await User.findByIdAndUpdate(req.user._id, { virtualNetWorth: breakdown.netWorth });
     res.json({ message: 'Withdrawal successful', newBalance: account.balance });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -182,6 +211,8 @@ const transferMoney = async (req, res) => {
       date: req.user.simulationDate || Date.now()
     });
 
+    const breakdown = await computeNetWorth(req.user._id, 'LIVE');
+    await User.findByIdAndUpdate(req.user._id, { virtualNetWorth: breakdown.netWorth });
     res.json({ message: 'Transfer successful' });
 
   } catch (error) {
@@ -221,6 +252,7 @@ const getAllTransactions = async (req, res) => {
 module.exports = {
   createBankAccount,
   getBankAccounts,
+  setMonthlyDepositPlan,
   depositMoney,
   withdrawMoney,
   transferMoney,

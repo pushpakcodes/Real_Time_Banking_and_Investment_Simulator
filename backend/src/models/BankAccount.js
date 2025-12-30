@@ -7,6 +7,11 @@ const bankAccountSchema = new mongoose.Schema({
   type: { type: String, enum: ['Savings', 'Current'], default: 'Savings' },
   balance: { type: Number, required: true, default: 0 },
   interestRate: { type: Number, default: 3.5 }, // Annual Interest Rate %
+  monthlyDeposit: {
+    amount: { type: Number, default: 0 },
+    dayOfMonth: { type: Number, min: 1, max: 31, default: 1 },
+    active: { type: Boolean, default: false }
+  },
   createdAt: { type: Date, default: Date.now }
 });
 

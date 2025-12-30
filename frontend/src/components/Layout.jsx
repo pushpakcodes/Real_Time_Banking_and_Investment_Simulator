@@ -1,9 +1,9 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../api';
-import { LayoutDashboard, Wallet, TrendingUp, DollarSign, Clock, LogOut, Menu, X, Play, User } from 'lucide-react';
+import { LayoutDashboard, Wallet, TrendingUp, IndianRupee, Clock, LogOut, Menu, X, Play, User } from 'lucide-react';
 import { AnimatedBackground } from './ui/AnimatedBackground';
 import { motion } from 'framer-motion';
 
@@ -12,8 +12,12 @@ const Layout = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const [simYears, setSimYears] = useState(0);
   const [simMonths, setSimMonths] = useState(1);
+  const [depositAmount, setDepositAmount] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [simulationActive, setSimulationActive] = useState(false);
+  const [depositMode, setDepositMode] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -22,22 +26,31 @@ const Layout = () => {
 
   const handleSimulate = async () => {
     try {
-      // Convert months to days (approx 30 days per month)
-      const days = simMonths * 30;
+      const totalMonths = (simYears * 12) + simMonths;
+      const days = totalMonths * 30; // approx conversion
       const { data } = await api.post('/simulate/advance', { days });
-      toast.success(data.message || `Simulated ${simMonths} months successfully!`);
+      toast.success(data.message || `Simulated ${simYears}y ${simMonths}m successfully!`);
       refreshProfile(); 
       window.location.reload(); 
     } catch (err) {
       toast.error('Simulation failed: ' + (err.response?.data?.message || err.message));
     }
   };
+  
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/simulate/session/status');
+        setSimulationActive(!!data.active);
+      } catch {}
+    })();
+  }, []);
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/dashboard/banking', label: 'Banking', icon: <Wallet size={20} /> },
     { path: '/dashboard/stocks', label: 'Stocks', icon: <TrendingUp size={20} /> },
-    { path: '/dashboard/loans', label: 'Loans', icon: <DollarSign size={20} /> },
+    { path: '/dashboard/loans', label: 'Loans', icon: <IndianRupee size={20} /> },
     { path: '/dashboard/fds', label: 'FDs & Savings', icon: <Clock size={20} /> },
   ];
 
@@ -114,7 +127,7 @@ const Layout = () => {
             <div className="h-8 w-px bg-white/10"></div>
             <div className="flex flex-col">
               <span className="text-gray-500 text-xs uppercase tracking-wider font-semibold">Net Worth</span>
-              <span className="font-bold text-emerald-400 text-base">${user?.virtualNetWorth?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="font-bold text-emerald-400 text-base">₹{user?.virtualNetWorth?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="h-8 w-px bg-white/10"></div>
             <div className="flex flex-col">
@@ -124,37 +137,95 @@ const Layout = () => {
           </div>
 
           <div className="flex items-center space-x-4 bg-black/40 rounded-2xl p-1.5 border border-white/10">
-            <button 
-              onClick={async () => {
-                const amount = prompt('Enter amount to add:');
-                if (!amount) return;
-                try {
-                  const accRes = await api.get('/bank/accounts');
-                  if (accRes.data.length === 0) return toast.error('Please open a bank account first!');
-                  await api.post('/bank/deposit', { accountId: accRes.data[0]._id, amount });
-                  toast.success(`Successfully added $${amount} to ${accRes.data[0].bankName}`);
-                  window.location.reload();
-                } catch (err) {
-                  toast.error('Error: ' + err.message);
-                }
-              }}
-              className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 px-4 py-2 rounded-xl font-medium text-sm transition-all border border-emerald-500/30"
-            >
-              + Add Money
-            </button>
-            <div className="flex items-center px-3 border-l border-white/10 ml-2 pl-4">
-              <select 
-                value={simMonths} 
-                onChange={(e) => setSimMonths(Number(e.target.value))}
-                className="bg-transparent border-none text-white text-sm focus:outline-none cursor-pointer"
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSimulationActive(prev => prev || false)}
+                className="hidden"
               >
-                <option value={1} className="bg-gray-900">1 Month</option>
-                <option value={3} className="bg-gray-900">3 Months</option>
-                <option value={6} className="bg-gray-900">6 Months</option>
-                <option value={12} className="bg-gray-900">1 Year</option>
-                <option value={24} className="bg-gray-900">2 Years</option>
-                <option value={60} className="bg-gray-900">5 Years</option>
-              </select>
+                .
+              </button>
+              <button
+                onClick={() => setDepositAmount('')}
+                className="hidden"
+              >
+                .
+              </button>
+              <button
+                onClick={() => setSimYears(simYears)}
+                className="hidden"
+              >
+                .
+              </button>
+              <button
+                onClick={() => setSimMonths(simMonths)}
+                className="hidden"
+              >
+                .
+              </button>
+              <button
+                onClick={() => setDepositMode('one')}
+                className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 px-4 py-2 rounded-xl font-medium text-sm transition-all border border-emerald-500/30"
+              >
+                Deposit Money
+              </button>
+              <button
+                onClick={() => setDepositMode('monthly')}
+                className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-4 py-2 rounded-xl font-medium text-sm transition-all border border-blue-500/30"
+              >
+                Deposit Monthly
+              </button>
+              {depositMode && (
+                <>
+                  <input 
+                    type="number" 
+                    placeholder="₹0.00"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className="w-56 bg-white/5 border border-white/10 rounded px-3 py-2 text-white focus:outline-none"
+                  />
+                  <button 
+                    onClick={async () => {
+                      if (!depositAmount || Number(depositAmount) <= 0) return;
+                      try {
+                        const accRes = await api.get('/bank/accounts');
+                        if (accRes.data.length === 0) return;
+                        const targetId = accRes.data[0]._id;
+                        if (depositMode === 'one') {
+                          await api.post('/bank/deposit', { accountId: targetId, amount: Number(depositAmount) });
+                        } else if (depositMode === 'monthly') {
+                          const simDay = user?.simulationDate ? new Date(user.simulationDate).getDate() : 1;
+                          await api.post('/bank/deposit-plan', { accountId: targetId, amount: Number(depositAmount), dayOfMonth: simDay, active: true });
+                        }
+                        setDepositAmount('');
+                        setDepositMode(null);
+                      } catch {}
+                    }}
+                    className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl font-medium text-sm transition-all border border-white/20"
+                  >
+                    {depositMode === 'monthly' ? 'Set Monthly' : 'Deposit'}
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="flex items-center px-3 border-l border-white/10 ml-2 pl-4">
+              <div className="flex items-center gap-2 text-sm">
+                <label className="text-gray-400">Years</label>
+                <input 
+                  type="number" 
+                  min={0}
+                  value={simYears}
+                  onChange={(e) => setSimYears(Number(e.target.value))}
+                  className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-white focus:outline-none"
+                />
+                <label className="text-gray-400">Months</label>
+                <input 
+                  type="number" 
+                  min={0}
+                  value={simMonths}
+                  onChange={(e) => setSimMonths(Number(e.target.value))}
+                  className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-white focus:outline-none"
+                />
+              </div>
             </div>
             <button 
               onClick={handleSimulate}
@@ -163,6 +234,19 @@ const Layout = () => {
               <Play size={16} fill="currentColor" />
               Simulate
             </button>
+            {simulationActive && (
+            <button
+              onClick={async () => {
+                try {
+                  await api.post('/simulate/session/end');
+                  window.location.reload();
+                } catch {}
+              }}
+              className="bg-white/5 hover:bg-white/10 text-gray-200 px-3 py-1.5 rounded-xl font-medium text-xs transition-all border border-white/10"
+            >
+              Exit
+            </button>
+            )}
           </div>
         </header>
 

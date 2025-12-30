@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import { useToast } from '../context/ToastContext';
-import { DollarSign, Briefcase, GraduationCap, Home } from 'lucide-react';
+import { IndianRupee, Briefcase, GraduationCap, Home } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
 import { GlowingButton } from '../components/ui/GlowingButton';
@@ -84,7 +84,7 @@ const Loans = () => {
         {/* Active Loans */}
         <div className="space-y-4">
           <motion.h3 variants={itemVariants} className="text-xl font-semibold text-gray-200 flex items-center gap-2">
-            <DollarSign className="text-red-400" /> Active Liabilities
+            <IndianRupee className="text-red-400" /> Active Liabilities
           </motion.h3>
           <div className="grid gap-4">
             {loans.map(l => (
@@ -111,19 +111,19 @@ const Loans = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Principal</p>
-                    <p className="text-white font-medium">${l.principal.toLocaleString()}</p>
+                    <p className="text-white font-medium">₹{l.principal.toLocaleString('en-IN')}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Remaining</p>
-                    <p className="text-white font-medium">${l.remainingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-white font-medium">₹{l.remainingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">EMI</p>
-                    <p className="text-red-400 font-bold">${l.emiAmount.toFixed(2)}/mo</p>
+                    <p className="text-red-400 font-bold">₹{l.emiAmount.toFixed(2)}/mo</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Interest Paid</p>
-                    <p className="text-white font-medium">${l.totalInterestPaid.toFixed(2)}</p>
+                    <p className="text-white font-medium">₹{l.totalInterestPaid.toFixed(2)}</p>
                   </div>
                 </div>
                 
@@ -164,7 +164,7 @@ const Loans = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Amount ($)</label>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Amount (₹)</label>
               <input 
                 type="number" 
                 value={amount} 

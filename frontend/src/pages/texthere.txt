@@ -1,0 +1,35 @@
+Net Worth Calculation (In Depth)
+
+1) Without Running Simulation
+- Bank: Sum all BankAccount.balance for the user
+- Stocks: For each Portfolio item, multiply stock.currentPrice × quantity and sum
+- Fixed Deposits: Sum principal of ACTIVE FixedDeposit records
+- Loans: Sum remainingBalance of ACTIVE Loan records
+- Net Worth = Bank Sum + Stocks Sum + FD Sum − Loan Sum
+- This is a point-in-time calculation using the latest persisted values, without advancing time or applying interest, EMIs, or market movement.
+
+2) After Simulation (Desired Period)
+- Simulation advances time day by day; each day applies:
+  - Savings interest: Daily compounding added to BankAccount.balance
+  - Monthly deposit plan: On the configured dayOfMonth, amount credited to the chosen bank account
+  - Loan EMI: On monthly cadence (matching start day), EMI deducts from a bank account; remainingBalance reduces by principal component; status flips to CLOSED when balance reaches 0
+  - Fixed Deposit maturity: On maturityDate, final amount (principal grown by compounding) is credited to the source account; status becomes MATURED
+  - Stock price dynamics: stock.currentPrice updated using drift, volatility, and trend; simulatedHistory appended
+- After these updates, net worth is recomputed with the same formula:
+  - Net Worth = TotalBankBalance + TotalStockValue + TotalFDValue − TotalLoanLiability
+- TotalBankBalance: Sum of all updated BankAccount.balance
+- TotalStockValue: Sum of updated stock.currentPrice × owned quantity (from Portfolio)
+- TotalFDValue: Sum of principal of ACTIVE FDs (simplified; matured FDs are credited to bank balance)
+- TotalLoanLiability: Sum of updated remainingBalance for ACTIVE loans
+
+Behavioral Notes
+- Deposits/withdrawals/transfer adjust bank balances immediately; they do not directly change net worth in the user header until a simulation run updates user.virtualNetWorth or you compute the formula client-side.
+- Monthly deposit plans are automatic during simulation; each month, the specified amount is added on dayOfMonth.
+- Stock buys/sells move money between bank accounts and portfolio; unrealized P/L in net worth comes from currentPrice × quantity (not averageBuyPrice).
+
+Precision & Display
+- All monetary values are displayed with the Indian rupee symbol (₹) and two decimal places via locale formatting (en-IN).
+
+Summary
+- No Simulation: Use persisted balances and prices to compute the formula directly.
+- After Simulation: Use the same formula, but with values evolved by interest accrual, EMIs, FD maturity credits, monthly deposits, and market movement.

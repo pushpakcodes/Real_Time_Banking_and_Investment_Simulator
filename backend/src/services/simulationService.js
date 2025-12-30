@@ -5,6 +5,9 @@ const FixedDeposit = require('../models/FixedDeposit');
 const Portfolio = require('../models/Portfolio');
 const Transaction = require('../models/Transaction');
 const SimulationSnapshot = require('../models/SimulationSnapshot');
+const { computeNetWorth } = require('./netWorthService');
+const SimulationSession = require('../models/SimulationSession');
+const { recordSessionTransactions } = require('./simulationSessionService');
 
 // Helper for Normal Distribution (Box-Muller)
 const randomNormal = (mean = 0, stdev = 1) => {
@@ -66,6 +69,23 @@ const advanceSimulation = async (user, days) => {
       }
     });
 
+    // 2b. Monthly Recurring Deposits
+    accounts.forEach(acc => {
+      if (acc.monthlyDeposit && acc.monthlyDeposit.active) {
+        const depositDay = acc.monthlyDeposit.dayOfMonth || 1;
+        if (dayOfMonth === depositDay && acc.monthlyDeposit.amount > 0) {
+          acc.balance += Number(acc.monthlyDeposit.amount);
+          transactionsToCreate.push({
+            user: userId,
+            account: acc._id,
+            type: 'DEPOSIT',
+            amount: Number(acc.monthlyDeposit.amount),
+            description: `Monthly deposit`,
+            date: new Date(currentDate)
+          });
+        }
+      }
+    });
     // 3. Loan EMI
     loans.forEach(loan => {
       const loanStartDay = new Date(loan.startDate).getDate();
@@ -148,38 +168,34 @@ const advanceSimulation = async (user, days) => {
     ...fds.map(f => f.save()),
     transactionsToCreate.length > 0 ? Transaction.insertMany(transactionsToCreate) : Promise.resolve()
   ]);
+  if (transactionsToCreate.length > 0) {
+    const activeSession = await SimulationSession.findOne({ user: userId, active: true });
+    if (activeSession) {
+      const created = await Transaction.find({ user: userId }).sort({ realDate: -1 }).limit(transactionsToCreate.length).select('_id');
+      await recordSessionTransactions(userId, created.map(c => c._id));
+    }
+  }
 
   // Update User Date
   user.simulationDate = currentDate;
-  
-  // Calculate Net Worth
-  const totalBankBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-  const totalStockValue = stocks.reduce((sum, stock) => {
-    const qty = portfolioMap[stock._id.toString()] || 0;
-    return sum + (stock.currentPrice * qty);
-  }, 0);
-  const totalLoanLiability = loans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
-  const totalFDValue = fds.filter(f => f.status === 'ACTIVE').reduce((sum, fd) => sum + fd.principal, 0); // Simplified
-
-  const netWorth = totalBankBalance + totalStockValue + totalFDValue - totalLoanLiability;
-  
-  user.virtualNetWorth = netWorth;
+  const breakdown = await computeNetWorth(userId, 'POST_SIMULATION');
+  user.virtualNetWorth = breakdown.netWorth;
   await user.save();
 
   // Save Snapshot
   await SimulationSnapshot.create({
     user: userId,
     date: currentDate,
-    netWorth,
-    totalBankBalance,
-    totalStockValue,
-    totalLoanLiability,
-    totalFDValue
+    netWorth: breakdown.netWorth,
+    totalBankBalance: breakdown.totalBankBalance,
+    totalStockValue: breakdown.totalStockValue,
+    totalLoanLiability: breakdown.totalLoanLiability,
+    totalFDValue: breakdown.totalFDValue
   });
 
   return {
     simulationDate: currentDate,
-    netWorth,
+    netWorth: breakdown.netWorth,
     message: `Simulated ${days} days successfully.`
   };
 };

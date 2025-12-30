@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../api';
 import { useToast } from '../context/ToastContext';
 import { TrendingUp, Activity, PieChart, Search, Plus } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area } from 'recharts';
 import { motion } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
 import { GlowingButton } from '../components/ui/GlowingButton';
@@ -26,8 +26,9 @@ const Stocks = () => {
   const [sellQty, setSellQty] = useState('');
 
   const { toast } = useToast();
+  const isMotionAvailable = !!motion;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [s, p, a] = await Promise.all([
         api.get('/stocks'),
@@ -41,11 +42,11 @@ const Stocks = () => {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [selectedAccount]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    Promise.resolve().then(() => fetchData());
+  }, [fetchData]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -53,7 +54,7 @@ const Stocks = () => {
     try {
       const { data } = await api.get(`/stocks/search?symbol=${searchSymbol}`);
       setSearchedStock(data);
-    } catch (err) {
+    } catch {
       toast.error('Stock not found or API error');
       setSearchedStock(null);
     }
@@ -122,7 +123,7 @@ const Stocks = () => {
     try {
       const { data } = await api.get(`/stocks/${stock._id}/prediction?days=30`);
       setPrediction(data);
-    } catch (err) {
+    } catch {
       toast.error('Error fetching prediction');
     }
   };
@@ -162,6 +163,7 @@ const Stocks = () => {
           </select>
 
     </motion.div>
+      {isMotionAvailable && null}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -194,7 +196,7 @@ const Stocks = () => {
                  <>
                     <div className="bg-white/5 px-4 py-2 rounded-xl border border-white/10">
                         <p className="text-sm text-gray-400">Current Price</p>
-                        <p className="text-xl font-bold text-emerald-400">₹{searchedStock.price}</p>
+                        <p className="text-xl font-bold text-emerald-400">₹{Number(searchedStock.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                     <div className="w-32">
                         <label className="block text-sm font-medium text-gray-400 mb-1">Quantity</label>

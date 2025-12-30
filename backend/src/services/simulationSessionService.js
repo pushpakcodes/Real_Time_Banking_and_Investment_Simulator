@@ -1,0 +1,86 @@
+const SimulationSession = require('../models/SimulationSession');
+const BankAccount = require('../models/BankAccount');
+const Stock = require('../models/Stock');
+const Loan = require('../models/Loan');
+const FixedDeposit = require('../models/FixedDeposit');
+const User = require('../models/User');
+const Transaction = require('../models/Transaction');
+
+const startSession = async (userId) => {
+  const accounts = await BankAccount.find({ user: userId });
+  const stocks = await Stock.find({ user: userId });
+  const loans = await Loan.find({ user: userId });
+  const fds = await FixedDeposit.find({ user: userId });
+  const user = await User.findById(userId);
+
+  const baseline = {
+    user: {
+      simulationDate: user.simulationDate,
+      virtualNetWorth: user.virtualNetWorth
+    },
+    accounts: accounts.map(a => ({ _id: a._id, balance: Number(a.balance || 0) })),
+    stocks: stocks.map(s => ({ _id: s._id, currentPrice: Number(s.currentPrice || 0) })),
+    loans: loans.map(l => ({ _id: l._id, remainingBalance: Number(l.remainingBalance || 0), status: l.status })),
+    fds: fds.map(f => ({ _id: f._id, status: f.status }))
+  };
+
+  await SimulationSession.findOneAndUpdate(
+    { user: userId },
+    { active: true, startedAt: new Date(), baseline, transactionsCreated: [] },
+    { upsert: true }
+  );
+  return { message: 'Simulation session started' };
+};
+
+const recordSessionTransactions = async (userId, txIds = []) => {
+  if (!txIds.length) return;
+  const session = await SimulationSession.findOne({ user: userId, active: true });
+  if (!session) return;
+  session.transactionsCreated = [...session.transactionsCreated, ...txIds];
+  await session.save();
+};
+
+const endSession = async (userId) => {
+  const session = await SimulationSession.findOne({ user: userId, active: true });
+  if (!session) return { message: 'No active session' };
+
+  const { baseline, transactionsCreated } = session;
+
+  // Restore user
+  await User.findByIdAndUpdate(userId, {
+    simulationDate: baseline.user.simulationDate,
+    virtualNetWorth: baseline.user.virtualNetWorth
+  });
+
+  // Restore accounts
+  for (const a of baseline.accounts) {
+    await BankAccount.findByIdAndUpdate(a._id, { balance: a.balance });
+  }
+
+  // Restore stocks and clear simulated history residue
+  for (const s of baseline.stocks) {
+    await Stock.findByIdAndUpdate(s._id, { currentPrice: s.currentPrice, simulatedHistory: [] });
+  }
+
+  // Restore loans
+  for (const l of baseline.loans) {
+    await Loan.findByIdAndUpdate(l._id, { remainingBalance: l.remainingBalance, status: l.status });
+  }
+
+  // Restore FDs
+  for (const f of baseline.fds) {
+    await FixedDeposit.findByIdAndUpdate(f._id, { status: f.status });
+  }
+
+  // Delete transactions created during the session
+  if (transactionsCreated && transactionsCreated.length > 0) {
+    await Transaction.deleteMany({ _id: { $in: transactionsCreated } });
+  }
+
+  session.active = false;
+  await session.save();
+
+  return { message: 'Simulation session ended and original values restored' };
+};
+
+module.exports = { startSession, endSession, recordSessionTransactions };

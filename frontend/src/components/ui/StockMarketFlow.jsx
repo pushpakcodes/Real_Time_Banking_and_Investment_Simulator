@@ -10,7 +10,7 @@ const StockTicker = ({ symbol, price, change, isUp, delay }) => (
     className="flex items-center gap-2 bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10"
   >
     <span className="font-bold text-xs text-white">{symbol}</span>
-    <span className="text-xs text-gray-400">${price}</span>
+    <span className="text-xs text-gray-400">₹{price}</span>
     <span className={`text-[10px] flex items-center ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
       {isUp ? <TrendingUp size={10} className="mr-1" /> : <TrendingDown size={10} className="mr-1" />}
       {change}%
@@ -105,7 +105,7 @@ export const StockMarketFlow = () => {
             <p className="text-xs text-gray-400">Real-time global indices</p>
           </div>
           <div className="text-right">
-             <p className="text-2xl font-bold text-white tracking-tight">$14,293.42</p>
+             <p className="text-2xl font-bold text-white tracking-tight">₹14,293.42</p>
              <p className="text-xs text-emerald-400 font-medium">+1.24% today</p>
           </div>
         </div>
