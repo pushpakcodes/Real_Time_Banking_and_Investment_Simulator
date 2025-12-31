@@ -6,32 +6,6 @@ const FixedDeposit = require('../models/FixedDeposit');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 
-const startSession = async (userId) => {
-  const accounts = await BankAccount.find({ user: userId });
-  const stocks = await Stock.find({ user: userId });
-  const loans = await Loan.find({ user: userId });
-  const fds = await FixedDeposit.find({ user: userId });
-  const user = await User.findById(userId);
-
-  const baseline = {
-    user: {
-      simulationDate: user.simulationDate,
-      virtualNetWorth: user.virtualNetWorth
-    },
-    accounts: accounts.map(a => ({ _id: a._id, balance: Number(a.balance || 0) })),
-    stocks: stocks.map(s => ({ _id: s._id, currentPrice: Number(s.currentPrice || 0) })),
-    loans: loans.map(l => ({ _id: l._id, remainingBalance: Number(l.remainingBalance || 0), status: l.status })),
-    fds: fds.map(f => ({ _id: f._id, status: f.status }))
-  };
-
-  await SimulationSession.findOneAndUpdate(
-    { user: userId },
-    { active: true, startedAt: new Date(), baseline, transactionsCreated: [] },
-    { upsert: true }
-  );
-  return { message: 'Simulation session started' };
-};
-
 const recordSessionTransactions = async (userId, txIds = []) => {
   if (!txIds.length) return;
   const session = await SimulationSession.findOne({ user: userId, active: true });
@@ -81,6 +55,40 @@ const endSession = async (userId) => {
   await session.save();
 
   return { message: 'Simulation session ended and original values restored' };
+};
+
+const startSession = async (userId) => {
+  // Check if user is already in a simulation
+  // If so, end it first to restore original values before capturing new baseline
+  const existingSession = await SimulationSession.findOne({ user: userId, active: true });
+  if (existingSession) {
+    console.log(`[Simulation] Active session found for user ${userId}. Restoring baseline before restarting.`);
+    await endSession(userId);
+  }
+
+  const accounts = await BankAccount.find({ user: userId });
+  const stocks = await Stock.find({ user: userId });
+  const loans = await Loan.find({ user: userId });
+  const fds = await FixedDeposit.find({ user: userId });
+  const user = await User.findById(userId);
+
+  const baseline = {
+    user: {
+      simulationDate: user.simulationDate,
+      virtualNetWorth: user.virtualNetWorth
+    },
+    accounts: accounts.map(a => ({ _id: a._id, balance: Number(a.balance || 0) })),
+    stocks: stocks.map(s => ({ _id: s._id, currentPrice: Number(s.currentPrice || 0) })),
+    loans: loans.map(l => ({ _id: l._id, remainingBalance: Number(l.remainingBalance || 0), status: l.status })),
+    fds: fds.map(f => ({ _id: f._id, status: f.status }))
+  };
+
+  await SimulationSession.findOneAndUpdate(
+    { user: userId },
+    { active: true, startedAt: new Date(), baseline, transactionsCreated: [] },
+    { upsert: true }
+  );
+  return { message: 'Simulation session started' };
 };
 
 module.exports = { startSession, endSession, recordSessionTransactions };

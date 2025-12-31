@@ -8,6 +8,7 @@ const SimulationSnapshot = require('../models/SimulationSnapshot');
 const { computeNetWorth } = require('./netWorthService');
 const SimulationSession = require('../models/SimulationSession');
 const { recordSessionTransactions } = require('./simulationSessionService');
+const { getDirectionalTrend } = require('./finnhubService');
 
 // Helper for Normal Distribution (Box-Muller)
 const randomNormal = (mean = 0, stdev = 1) => {
@@ -43,6 +44,19 @@ const advanceSimulation = async (user, days) => {
 
   const transactionsToCreate = [];
 
+  // Fetch Directional Trends (Finnhub)
+  const sentimentMap = {};
+  const uniqueSymbols = [...new Set(stocks.map(s => s.symbol))];
+  // Parallel fetch but safe
+  await Promise.all(uniqueSymbols.map(async (symbol) => {
+    try {
+        const sentiment = await getDirectionalTrend(symbol);
+        sentimentMap[symbol] = sentiment.direction;
+    } catch (e) {
+        console.warn(`Failed to fetch sentiment for ${symbol} in simulation:`, e.message);
+    }
+  }));
+
   // Loop through days
   for (let i = 1; i <= days; i++) {
     currentDate.setDate(currentDate.getDate() + 1);
@@ -50,7 +64,13 @@ const advanceSimulation = async (user, days) => {
 
     // 1. Update Stocks
     stocks.forEach(stock => {
-      const drift = stock.growthBias;
+      let drift = stock.growthBias;
+
+      // Apply Sentiment Bias
+      const direction = sentimentMap[stock.symbol];
+      if (direction === 'UP') drift += 0.0005;
+      if (direction === 'DOWN') drift -= 0.0005;
+
       const shock = stock.volatility * randomNormal();
       let changePercent = drift + shock;
       

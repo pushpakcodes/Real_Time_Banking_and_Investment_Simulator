@@ -3,6 +3,7 @@ const Portfolio = require('../models/Portfolio');
 const BankAccount = require('../models/BankAccount');
 const Transaction = require('../models/Transaction');
 const { getLatestPrice, getHistoricalData } = require('../services/twelveDataService');
+const { getDirectionalTrend } = require('../services/finnhubService');
 
 // Helper to ensure stock data is fresh
 const ensureStockUpdated = async (stock) => {
@@ -429,4 +430,19 @@ const addPortfolioItem = async (req, res) => {
   }
 };
 
-module.exports = { getStocks, getStockDetails, buyStock, sellStock, getPortfolio, getStockPrediction, searchStock, addPortfolioItem };
+// @desc    Get stock directional trend
+// @route   GET /api/stocks/direction/:symbol
+// @access  Private
+const getStockDirection = async (req, res) => {
+  const { symbol } = req.params;
+  if (!symbol) return res.status(400).json({ message: 'Symbol is required' });
+
+  try {
+    const data = await getDirectionalTrend(symbol);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getStocks, getStockDetails, buyStock, sellStock, getPortfolio, getStockPrediction, searchStock, addPortfolioItem, getStockDirection };
