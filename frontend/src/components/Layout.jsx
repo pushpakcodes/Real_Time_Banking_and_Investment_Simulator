@@ -185,24 +185,42 @@ const Layout = () => {
                   />
                   <button 
                     onClick={async () => {
-                      if (!depositAmount || Number(depositAmount) <= 0) return;
+                      if (!depositAmount || Number(depositAmount) <= 0) {
+                        toast.error('Enter a valid amount');
+                        return;
+                      }
                       try {
                         const accRes = await api.get('/bank/accounts');
-                        if (accRes.data.length === 0) return;
+                        if (accRes.data.length === 0) {
+                          toast.error('No bank account found. Create one first.');
+                          return;
+                        }
                         const targetId = accRes.data[0]._id;
                         if (depositMode === 'one') {
                           await api.post('/bank/deposit', { accountId: targetId, amount: Number(depositAmount) });
+                          toast.success('Deposit successful');
                         } else if (depositMode === 'monthly') {
                           const simDay = user?.simulationDate ? new Date(user.simulationDate).getDate() : 1;
                           await api.post('/bank/deposit-plan', { accountId: targetId, amount: Number(depositAmount), dayOfMonth: simDay, active: true });
+                          toast.success('Monthly deposit plan set');
                         }
+                        await refreshProfile();
                         setDepositAmount('');
                         setDepositMode(null);
-                      } catch {}
+                      } catch (err) {
+                        const msg = err.response?.data?.message || 'Request failed';
+                        toast.error(msg);
+                      }
                     }}
                     className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl font-medium text-sm transition-all border border-white/20"
                   >
                     {depositMode === 'monthly' ? 'Set Monthly' : 'Deposit'}
+                  </button>
+                  <button
+                    onClick={() => { setDepositAmount(''); setDepositMode(null); }}
+                    className="bg-white/5 hover:bg-white/10 text-gray-200 px-4 py-2 rounded-xl font-medium text-sm transition-all border border-white/10"
+                  >
+                    Cancel
                   </button>
                 </>
               )}

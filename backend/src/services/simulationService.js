@@ -17,6 +17,11 @@ const randomNormal = (mean = 0, stdev = 1) => {
   return z * stdev + mean;
 };
 
+// Month difference helper
+const monthsBetween = (a, b) => {
+  return (a.getFullYear() - b.getFullYear()) * 12 + (a.getMonth() - b.getMonth());
+};
+
 const advanceSimulation = async (user, days) => {
   const userId = user._id;
   let currentDate = new Date(user.simulationDate);
@@ -88,41 +93,57 @@ const advanceSimulation = async (user, days) => {
     });
     // 3. Loan EMI
     loans.forEach(loan => {
+      if (loan.status !== 'ACTIVE') return;
       const loanStartDay = new Date(loan.startDate).getDate();
       // Simple check: if day matches loan start day (approx monthly)
       if (dayOfMonth === loanStartDay) {
         // Find primary account (assume first savings account with balance)
-        const primaryAccount = accounts.find(a => a.type === 'Savings' && a.balance >= loan.emiAmount) || accounts[0];
-        
-        if (primaryAccount) {
-            // Deduct EMI
-            primaryAccount.balance -= loan.emiAmount;
-            loan.remainingBalance -= (loan.emiAmount - (loan.remainingBalance * loan.interestRate / 1200)); // Rough Principal reduction
-            if (loan.remainingBalance < 0) loan.remainingBalance = 0;
-            
-            // If it was defaulted, maybe restore to ACTIVE if they have funds now? 
-            // For now, let's keep it simple: If they pay, it stays/becomes ACTIVE.
-            if (loan.status === 'DEFAULTED') loan.status = 'ACTIVE';
+        const primaryAccount = accounts[0];
 
-            transactionsToCreate.push({
-                user: userId,
-                account: primaryAccount._id,
-                type: 'EMI',
-                amount: -loan.emiAmount, // Negative for deduction
-                description: `EMI for Loan ${loan._id}`,
-                date: new Date(currentDate)
-            });
+        const monthlyRate = loan.interestRate / 1200;
+        const interestForMonth = loan.remainingBalance * monthlyRate;
+        const principalComponent = loan.emiAmount - interestForMonth;
 
-            if (loan.remainingBalance <= 0) {
-                loan.status = 'CLOSED';
-            }
+        const monthsElapsed = monthsBetween(currentDate, new Date(loan.startDate));
+        const isFinalMonth = (monthsElapsed + 1) >= loan.tenureMonths || principalComponent >= loan.remainingBalance;
+
+        if (isFinalMonth) {
+          const settlementAmount = interestForMonth + loan.remainingBalance;
+          console.log(`Loan ${loan._id} FINAL EMI. Interest: ${interestForMonth.toFixed(2)} Remaining: ${loan.remainingBalance.toFixed(2)} Settlement: ${settlementAmount.toFixed(2)}`);
+          primaryAccount.balance -= settlementAmount;
+          loan.totalInterestPaid = Number(loan.totalInterestPaid || 0) + interestForMonth;
+          loan.remainingBalance = 0;
+          loan.status = 'CLOSED';
+          transactionsToCreate.push({
+            user: userId,
+            account: primaryAccount._id,
+            type: 'EMI',
+            amount: -settlementAmount,
+            description: `Final EMI for Loan ${loan._id}`,
+            date: new Date(currentDate)
+          });
+          console.log(`Loan ${loan._id} status -> CLOSED`);
         } else {
-            // Insufficient Funds Logic or No Account
-            console.log(`Loan ${loan._id} defaulted due to insufficient funds or no account.`);
-            loan.status = 'DEFAULTED';
-            
-            // Optional: Add penalty to principal? 
-            // loan.remainingBalance += 500; 
+          const canPay = primaryAccount && primaryAccount.balance >= loan.emiAmount;
+          if (canPay) {
+            primaryAccount.balance -= loan.emiAmount;
+            const newRemaining = loan.remainingBalance - principalComponent;
+            loan.remainingBalance = newRemaining < 0 ? 0 : newRemaining;
+            loan.totalInterestPaid = Number(loan.totalInterestPaid || 0) + interestForMonth;
+            if (loan.status === 'DEFAULTED') loan.status = 'ACTIVE';
+            transactionsToCreate.push({
+              user: userId,
+              account: primaryAccount._id,
+              type: 'EMI',
+              amount: -loan.emiAmount,
+              description: `EMI for Loan ${loan._id}`,
+              date: new Date(currentDate)
+            });
+            console.log(`Loan ${loan._id} EMI paid: ${loan.emiAmount.toFixed(2)} | Interest: ${interestForMonth.toFixed(2)} | Remaining: ${loan.remainingBalance.toFixed(2)}`);
+          } else {
+            loan.tenureMonths += 1;
+            console.log(`Loan ${loan._id} EMI skipped due to insufficient funds. Tenure extended to ${loan.tenureMonths} months. Remaining: ${loan.remainingBalance.toFixed(2)}`);
+          }
         }
       }
     });

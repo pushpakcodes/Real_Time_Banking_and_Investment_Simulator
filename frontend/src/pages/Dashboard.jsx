@@ -33,7 +33,7 @@ const Dashboard = () => {
     stocks: s.totalStockValue
   }));
 
-  const latest = data.snapshots[data.snapshots.length - 1] || { netWorth: 0, totalBankBalance: 0, totalStockValue: 0 };
+  const current = data.current || { netWorth: 0, totalBankBalance: 0, totalStockValue: 0 };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -69,7 +69,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                     <p className="text-gray-400 text-sm">Net Worth</p>
-                    <p className="text-2xl font-bold text-white">₹{latest.netWorth?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-2xl font-bold text-white">₹{current.netWorth?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
         </GlassCard>
@@ -81,7 +81,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                     <p className="text-gray-400 text-sm">Bank Balance</p>
-                    <p className="text-2xl font-bold text-white">₹{latest.totalBankBalance?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-2xl font-bold text-white">₹{current.totalBankBalance?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
         </GlassCard>
@@ -93,7 +93,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                     <p className="text-gray-400 text-sm">Stock Value</p>
-                    <p className="text-2xl font-bold text-white">₹{latest.totalStockValue?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-2xl font-bold text-white">₹{current.totalStockValue?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
         </GlassCard>
