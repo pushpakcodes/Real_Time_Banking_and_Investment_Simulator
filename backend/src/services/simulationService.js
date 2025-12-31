@@ -74,9 +74,9 @@ const advanceSimulation = async (user, days) => {
       const shock = stock.volatility * randomNormal();
       let changePercent = drift + shock;
       
-      // Trend influence
-      if (stock.trend === 'BULLISH') changePercent += 0.001;
-      if (stock.trend === 'BEARISH') changePercent -= 0.001;
+      // Trend influence removed to avoid double counting with growthBias
+      // if (stock.trend === 'BULLISH') changePercent += 0.001;
+      // if (stock.trend === 'BEARISH') changePercent -= 0.001;
 
       let newPrice = stock.currentPrice * (1 + changePercent);
       if (newPrice < 0.01) newPrice = 0.01; // Floor
@@ -170,7 +170,7 @@ const advanceSimulation = async (user, days) => {
 
     // 4. FD Maturity
     fds.forEach(fd => {
-        if (new Date(currentDate) >= new Date(fd.maturityDate)) {
+        if (fd.status === 'ACTIVE' && new Date(currentDate) >= new Date(fd.maturityDate)) {
             // Matured
             const finalAmount = fd.principal * Math.pow((1 + fd.interestRate / 100), (fd.maturityDate - fd.startDate) / (1000 * 60 * 60 * 24 * 365)); // Simple Compound
             // Credit to source account
