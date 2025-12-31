@@ -5,7 +5,7 @@ const transactionSchema = new mongoose.Schema({
   account: { type: mongoose.Schema.Types.ObjectId, ref: 'BankAccount', required: true },
   type: { 
     type: String, 
-    enum: ['DEPOSIT', 'WITHDRAWAL', 'TRANSFER', 'INTEREST', 'EMI', 'SALARY', 'INVESTMENT', 'LOAN_DISBURSAL', 'FD_CREATION', 'FD_MATURITY'], 
+    enum: ['DEPOSIT', 'WITHDRAWAL', 'TRANSFER', 'INTEREST', 'EMI', 'SALARY', 'INVESTMENT', 'LOAN_DISBURSAL', 'FD_CREATION', 'FD_MATURITY', 'EXPENSE', 'PAYMENT'], 
     required: true 
   },
   amount: { type: Number, required: true },

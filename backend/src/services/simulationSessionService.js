@@ -3,8 +3,11 @@ const BankAccount = require('../models/BankAccount');
 const Stock = require('../models/Stock');
 const Loan = require('../models/Loan');
 const FixedDeposit = require('../models/FixedDeposit');
+const CreditCard = require('../models/CreditCard');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
+
+const SimulationSnapshot = require('../models/SimulationSnapshot');
 
 const recordSessionTransactions = async (userId, txIds = []) => {
   if (!txIds.length) return;
@@ -46,6 +49,22 @@ const endSession = async (userId) => {
     await FixedDeposit.findByIdAndUpdate(f._id, { status: f.status });
   }
 
+  // Restore Credit Cards
+  if (baseline.creditCards) {
+    for (const cc of baseline.creditCards) {
+      await CreditCard.findByIdAndUpdate(cc._id, {
+        outstandingBalance: cc.outstandingBalance,
+        availableCredit: cc.availableCredit,
+        statementBalance: cc.statementBalance,
+        minimumDue: cc.minimumDue,
+        totalInterestPaid: cc.totalInterestPaid,
+        missedPaymentsCount: cc.missedPaymentsCount,
+        lastStatementDate: cc.lastStatementDate,
+        nextDueDate: cc.nextDueDate
+      });
+    }
+  }
+
   // Delete transactions created during the session
   if (transactionsCreated && transactionsCreated.length > 0) {
     await Transaction.deleteMany({ _id: { $in: transactionsCreated } });
@@ -70,6 +89,7 @@ const startSession = async (userId) => {
   const stocks = await Stock.find({ user: userId });
   const loans = await Loan.find({ user: userId });
   const fds = await FixedDeposit.find({ user: userId });
+  const creditCards = await CreditCard.find({ user: userId });
   const user = await User.findById(userId);
 
   const baseline = {
@@ -80,7 +100,18 @@ const startSession = async (userId) => {
     accounts: accounts.map(a => ({ _id: a._id, balance: Number(a.balance || 0) })),
     stocks: stocks.map(s => ({ _id: s._id, currentPrice: Number(s.currentPrice || 0) })),
     loans: loans.map(l => ({ _id: l._id, remainingBalance: Number(l.remainingBalance || 0), status: l.status })),
-    fds: fds.map(f => ({ _id: f._id, status: f.status }))
+    fds: fds.map(f => ({ _id: f._id, status: f.status })),
+    creditCards: creditCards.map(c => ({
+      _id: c._id,
+      outstandingBalance: Number(c.outstandingBalance || 0),
+      availableCredit: Number(c.availableCredit || 0),
+      statementBalance: Number(c.statementBalance || 0),
+      minimumDue: Number(c.minimumDue || 0),
+      totalInterestPaid: Number(c.totalInterestPaid || 0),
+      missedPaymentsCount: Number(c.missedPaymentsCount || 0),
+      lastStatementDate: c.lastStatementDate,
+      nextDueDate: c.nextDueDate
+    }))
   };
 
   await SimulationSession.findOneAndUpdate(
@@ -88,6 +119,10 @@ const startSession = async (userId) => {
     { active: true, startedAt: new Date(), baseline, transactionsCreated: [] },
     { upsert: true }
   );
+
+  // Clear previous simulation snapshots to ensure graph only shows current session data
+  await SimulationSnapshot.deleteMany({ user: userId });
+
   return { message: 'Simulation session started' };
 };
 

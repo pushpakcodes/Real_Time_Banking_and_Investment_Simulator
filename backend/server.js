@@ -15,6 +15,7 @@ const simulationRoutes = require('./src/routes/simulationRoutes');
 const stockRoutes = require('./src/routes/stockRoutes');
 const fdRoutes = require('./src/routes/fdRoutes');
 const loanRoutes = require('./src/routes/loanRoutes');
+const creditCardRoutes = require('./src/routes/creditCardRoutes');
 const analyticsRoutes = require('./src/routes/analyticsRoutes');
 
 // Connect to database
@@ -43,6 +44,7 @@ app.use('/api/bank', bankRoutes);
 app.use('/api/simulate', simulationRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/loans', loanRoutes);
+app.use('/api/credit-cards', creditCardRoutes);
 app.use('/api/fds', fdRoutes);
 app.use('/api/analytics', analyticsRoutes);
 

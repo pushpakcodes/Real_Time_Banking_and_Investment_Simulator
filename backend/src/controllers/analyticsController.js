@@ -7,9 +7,23 @@ const { computeNetWorth } = require('../services/netWorthService');
 // @access  Private
 const getDashboardData = async (req, res) => {
   try {
-    const snapshots = await SimulationSnapshot.find({ user: req.user._id })
-      .sort({ date: 1 })
-      .limit(30);
+    // 1. Fetch ALL snapshots (scoped to current session by startSession clearing)
+    const allSnapshots = await SimulationSnapshot.find({ user: req.user._id })
+      .sort({ date: 1 });
+    
+    // 2. Downsample if too many points (Max 100 points for graph)
+    // Graph resolution: ~100 points is enough for a smooth curve without noise
+    let snapshots = allSnapshots;
+    if (allSnapshots.length > 100) {
+        const step = Math.ceil(allSnapshots.length / 100);
+        snapshots = allSnapshots.filter((_, index) => index % step === 0);
+        
+        // Ensure the very last point is always included (Critical for final value accuracy)
+        const lastSnapshot = allSnapshots[allSnapshots.length - 1];
+        if (snapshots[snapshots.length - 1]._id.toString() !== lastSnapshot._id.toString()) {
+            snapshots.push(lastSnapshot);
+        }
+    }
     
     const recentTransactions = await Transaction.find({ user: req.user._id })
       .sort({ date: -1, realDate: -1 })

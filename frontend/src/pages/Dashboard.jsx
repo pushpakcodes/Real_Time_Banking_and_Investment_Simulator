@@ -8,6 +8,8 @@ import { TrendingUp, IndianRupee, Briefcase } from 'lucide-react';
 const Dashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [scaleType, setScaleType] = useState('linear'); // 'linear' | 'log'
+  const [viewMode, setViewMode] = useState('absolute'); // 'absolute' | 'relative'
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,14 +28,35 @@ const Dashboard = () => {
   if (loading) return <div className="text-gray-400 p-8">Loading Dashboard...</div>;
   if (!data) return <div className="text-red-400 p-8">Error loading data</div>;
 
-  const chartData = data.snapshots.map(s => ({
-    date: new Date(s.date).toLocaleDateString(),
-    netWorth: s.netWorth,
-    bank: s.totalBankBalance,
-    stocks: s.totalStockValue
-  }));
+  // Process data for Chart
+  let chartData = [];
+  let initialNetWorth = 1;
+
+  if (data.snapshots && data.snapshots.length > 0) {
+      initialNetWorth = data.snapshots[0].netWorth || 1;
+      
+      chartData = data.snapshots.map(s => {
+          let nw = s.netWorth;
+          // Relative Mode: Normalized to Initial Net Worth (1.0 = baseline)
+          if (viewMode === 'relative') {
+              nw = initialNetWorth !== 0 ? (s.netWorth / initialNetWorth) : 1;
+          }
+
+          return {
+            date: new Date(s.date).toLocaleDateString(),
+            netWorth: nw,
+            bank: s.totalBankBalance,
+            stocks: s.totalStockValue,
+            originalNetWorth: s.netWorth // For tooltip
+          };
+      });
+  }
 
   const current = data.current || { netWorth: 0, totalBankBalance: 0, totalStockValue: 0 };
+
+  // Safety check for Log Scale
+  const hasNonPositive = chartData.some(d => d.netWorth <= 0);
+  const effectiveScale = (scaleType === 'log' && !hasNonPositive) ? 'log' : 'linear';
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -100,8 +123,47 @@ const Dashboard = () => {
       </div>
 
       {/* Main Chart */}
-      <GlassCard variants={itemVariants} className="h-96 p-6">
-        <h3 className="text-xl font-semibold text-gray-200 mb-6">Net Worth Growth</h3>
+      <GlassCard variants={itemVariants} className="h-96 p-6 flex flex-col">
+        <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-200">Net Worth Growth</h3>
+            
+            <div className="flex space-x-4">
+                {/* Scale Toggle */}
+                <div className="flex bg-gray-800 rounded-lg p-1">
+                    <button 
+                        onClick={() => setScaleType('linear')}
+                        className={`px-3 py-1 text-xs rounded-md transition-colors ${scaleType === 'linear' ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Linear
+                    </button>
+                    <button 
+                        onClick={() => setScaleType('log')}
+                        disabled={hasNonPositive}
+                        title={hasNonPositive ? "Cannot use Log scale with zero or negative values" : ""}
+                        className={`px-3 py-1 text-xs rounded-md transition-colors ${scaleType === 'log' ? 'bg-emerald-600 text-white' : 'text-gray-400 hover:text-white'} ${hasNonPositive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        Log
+                    </button>
+                </div>
+
+                {/* View Mode Toggle */}
+                <div className="flex bg-gray-800 rounded-lg p-1">
+                    <button 
+                        onClick={() => setViewMode('absolute')}
+                        className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === 'absolute' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Absolute
+                    </button>
+                    <button 
+                        onClick={() => setViewMode('relative')}
+                        className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === 'relative' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Relative
+                    </button>
+                </div>
+            </div>
+        </div>
+
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
@@ -115,22 +177,36 @@ const Dashboard = () => {
                 dy={10}
               />
               <YAxis 
+                scale={effectiveScale}
+                domain={effectiveScale === 'log' ? ['auto', 'auto'] : ['auto', 'auto']}
                 stroke="#9ca3af" 
                 tick={{fill: '#9ca3af', fontSize: 12}}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => `₹${Math.round(value/1000)}k`}
+                tickFormatter={(value) => {
+                    if (viewMode === 'relative') return `${value.toFixed(2)}x`;
+                    if (Math.abs(value) >= 1000000) return `₹${(value/1000000).toFixed(1)}M`;
+                    if (Math.abs(value) >= 1000) return `₹${Math.round(value/1000)}k`;
+                    return `₹${value}`;
+                }}
               />
               <Tooltip 
                 contentStyle={{ 
-                    backgroundColor: 'rgba(17, 24, 39, 0.8)', 
+                    backgroundColor: 'rgba(17, 24, 39, 0.9)', 
                     borderColor: 'rgba(255, 255, 255, 0.1)', 
                     backdropFilter: 'blur(8px)',
                     borderRadius: '8px',
                     color: '#fff' 
                 }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(value, name) => [`₹${Number(value).toFixed(2)}`, name]}
+                formatter={(value, name, props) => {
+                    if (name === "Net Worth") {
+                        const original = props.payload.originalNetWorth;
+                        if (viewMode === 'relative') return [`${value.toFixed(2)}x (₹${original.toLocaleString()})`, name];
+                        return [`₹${Number(value).toLocaleString()}`, name];
+                    }
+                    return [`₹${Number(value).toLocaleString()}`, name];
+                }}
               />
               <Legend wrapperStyle={{paddingTop: '20px'}} />
               <Line type="monotone" dataKey="netWorth" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{r: 6}} name="Net Worth" />

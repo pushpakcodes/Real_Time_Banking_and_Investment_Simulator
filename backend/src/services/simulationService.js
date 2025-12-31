@@ -2,6 +2,7 @@ const BankAccount = require('../models/BankAccount');
 const Stock = require('../models/Stock');
 const Loan = require('../models/Loan');
 const FixedDeposit = require('../models/FixedDeposit');
+const CreditCard = require('../models/CreditCard');
 const Portfolio = require('../models/Portfolio');
 const Transaction = require('../models/Transaction');
 const SimulationSnapshot = require('../models/SimulationSnapshot');
@@ -9,6 +10,7 @@ const { computeNetWorth } = require('./netWorthService');
 const SimulationSession = require('../models/SimulationSession');
 const { recordSessionTransactions } = require('./simulationSessionService');
 const { getDirectionalTrend } = require('./finnhubService');
+const creditCardService = require('./creditCardService');
 
 // Helper for Normal Distribution (Box-Muller)
 const randomNormal = (mean = 0, stdev = 1) => {
@@ -32,6 +34,7 @@ const advanceSimulation = async (user, days) => {
   const stocks = await Stock.find({ user: userId });
   const loans = await Loan.find({ user: userId, status: 'ACTIVE' });
   const fds = await FixedDeposit.find({ user: userId, status: 'ACTIVE' });
+  const creditCards = await CreditCard.find({ user: userId, status: 'ACTIVE' });
   const portfolio = await Portfolio.find({ user: userId });
 
   // Map Portfolio for quick lookup
@@ -43,6 +46,7 @@ const advanceSimulation = async (user, days) => {
   });
 
   const transactionsToCreate = [];
+  const snapshotsToCreate = [];
 
   // Fetch Directional Trends (Finnhub)
   const sentimentMap = {};
@@ -206,6 +210,92 @@ const advanceSimulation = async (user, days) => {
             // Accrue interest (visual only if needed)
         }
     });
+
+    // 5. Credit Cards
+    for (const card of creditCards) {
+        // Billing Logic (Monthly on Billing Day)
+        if (dayOfMonth === card.billingDay) {
+            await creditCardService.generateStatement(card, currentDate);
+            
+            // Auto-Pay or Miss Logic?
+            // In simulation, we assume user might pay min due or full if they have balance?
+            // Or we just let it sit until they manually pay?
+            // Prompt says: "Credit card effects must be reversible on simulation exit... Payment deducts from bank balance"
+            // For now, we'll just simulate interest/billing. Auto-payment is complex user behavior.
+            // Let's assume user pays MINIMUM DUE automatically if they have funds, to avoid default?
+            // Or better: Let it accrue interest if not paid.
+            // But wait, "Part 3: Billing Cycle... Freeze statement balance".
+            
+            // Let's just generate statement.
+        }
+        
+        // Interest Logic (Monthly? Or Daily Check?)
+        // Part 5: "Interest is applied monthly... Add interest ONLY: After due date... On unpaid balances"
+        // We can check this daily: Is today == Due Date + 1? Or just check if overdue.
+        // creditCardService.applyInterest handles logic "if past due date and balance > 0".
+        // But we need to call it appropriately. Maybe once a day check?
+        // Or strictly once a month.
+        // Let's call it daily, the service function has checks.
+        // Actually, service function `applyInterest` adds interest. If we call it daily after due date, it might add interest DAILY.
+        // The prompt says "Interest is applied monthly, NOT daily".
+        // So we should only apply interest ONCE per billing cycle, specifically after grace period.
+        // Let's say we apply it on (Due Date + 1).
+        
+        if (card.nextDueDate) {
+            const dueDate = new Date(card.nextDueDate);
+            // Check if today is exactly 1 day after due date
+            const dayAfterDue = new Date(dueDate);
+            dayAfterDue.setDate(dueDate.getDate() + 1);
+            
+            if (currentDate.getDate() === dayAfterDue.getDate() && 
+                currentDate.getMonth() === dayAfterDue.getMonth() &&
+                currentDate.getFullYear() === dayAfterDue.getFullYear()) {
+                    
+                await creditCardService.applyInterest(card, currentDate);
+            }
+        }
+    }
+
+    // 6. Snapshot Logic (Monthly)
+    // Capture snapshot on the 1st of every month to ensure graph has data points
+    // Also capture the very first day to have a starting point
+    if (dayOfMonth === 1 || i === 1) {
+        let currentBankSum = 0;
+        accounts.forEach(a => currentBankSum += Math.max(0, a.balance));
+        
+        let currentStockSum = 0;
+        stocks.forEach(s => {
+            const qty = portfolioMap[s._id.toString()] || 0;
+            currentStockSum += (s.currentPrice * qty);
+        });
+
+        let currentLoanSum = 0;
+        loans.forEach(l => {
+            if (l.status === 'ACTIVE') currentLoanSum += Math.max(0, l.remainingBalance);
+        });
+
+        let currentFDSum = 0;
+        fds.forEach(f => {
+             if (f.status === 'ACTIVE') currentFDSum += Math.max(0, f.principal);
+        });
+
+        let currentCCSum = 0;
+        creditCards.forEach(c => {
+             if (c.status === 'ACTIVE') currentCCSum += Math.max(0, c.outstandingBalance);
+        });
+
+        const currentNetWorth = currentBankSum + currentStockSum + currentFDSum - currentLoanSum - currentCCSum;
+
+        snapshotsToCreate.push({
+            user: userId,
+            date: new Date(currentDate),
+            netWorth: currentNetWorth,
+            totalBankBalance: currentBankSum,
+            totalStockValue: currentStockSum,
+            totalLoanLiability: currentLoanSum,
+            totalFDValue: currentFDSum
+        });
+    }
   }
 
   // Save State
@@ -214,7 +304,8 @@ const advanceSimulation = async (user, days) => {
     ...stocks.map(s => s.save()),
     ...loans.map(l => l.save()),
     ...fds.map(f => f.save()),
-    transactionsToCreate.length > 0 ? Transaction.insertMany(transactionsToCreate) : Promise.resolve()
+    transactionsToCreate.length > 0 ? Transaction.insertMany(transactionsToCreate) : Promise.resolve(),
+    snapshotsToCreate.length > 0 ? SimulationSnapshot.insertMany(snapshotsToCreate) : Promise.resolve()
   ]);
   if (transactionsToCreate.length > 0) {
     const activeSession = await SimulationSession.findOne({ user: userId, active: true });
@@ -230,7 +321,7 @@ const advanceSimulation = async (user, days) => {
   user.virtualNetWorth = breakdown.netWorth;
   await user.save();
 
-  // Save Snapshot
+  // Save Final Snapshot (ensure we have the very last point)
   await SimulationSnapshot.create({
     user: userId,
     date: currentDate,
