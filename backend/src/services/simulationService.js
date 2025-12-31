@@ -61,29 +61,36 @@ const advanceSimulation = async (user, days) => {
   for (let i = 1; i <= days; i++) {
     currentDate.setDate(currentDate.getDate() + 1);
     const dayOfMonth = currentDate.getDate();
+    const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
 
-    // 1. Update Stocks
-    stocks.forEach(stock => {
-      let drift = stock.growthBias;
+    // 1. Update Stocks (Only on Trading Days: Mon-Fri)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        stocks.forEach(stock => {
+            // Cap drift to avoid unrealistic exponential growth (max 0.05% daily ~ 13% annual)
+            // If historical bias is higher, we clamp it.
+            let drift = stock.growthBias;
+            if (drift > 0.0005) drift = 0.0005; 
+            if (drift < -0.0005) drift = -0.0005;
 
-      // Apply Sentiment Bias
-      const direction = sentimentMap[stock.symbol];
-      if (direction === 'UP') drift += 0.0005;
-      if (direction === 'DOWN') drift -= 0.0005;
+            // Apply Sentiment Bias (Drastically reduced)
+            const direction = sentimentMap[stock.symbol];
+            if (direction === 'UP') drift += 0.00005; // Was 0.0001
+            if (direction === 'DOWN') drift -= 0.00005; // Was 0.0001
 
-      const shock = stock.volatility * randomNormal();
-      let changePercent = drift + shock;
-      
-      // Trend influence removed to avoid double counting with growthBias
-      // if (stock.trend === 'BULLISH') changePercent += 0.001;
-      // if (stock.trend === 'BEARISH') changePercent -= 0.001;
+            const shock = stock.volatility * randomNormal();
+            let changePercent = drift + shock;
+            
+            // Trend influence removed to avoid double counting with growthBias
+            // if (stock.trend === 'BULLISH') changePercent += 0.001;
+            // if (stock.trend === 'BEARISH') changePercent -= 0.001;
 
-      let newPrice = stock.currentPrice * (1 + changePercent);
-      if (newPrice < 0.01) newPrice = 0.01; // Floor
+            let newPrice = stock.currentPrice * (1 + changePercent);
+            if (newPrice < 0.01) newPrice = 0.01; // Floor
 
-      stock.currentPrice = newPrice;
-      stock.simulatedHistory.push({ date: new Date(currentDate), price: newPrice });
-    });
+            stock.currentPrice = newPrice;
+            stock.simulatedHistory.push({ date: new Date(currentDate), price: newPrice });
+        });
+    }
 
     // 2. Bank Interest (Daily Compounding for Simplicity)
     accounts.forEach(acc => {
