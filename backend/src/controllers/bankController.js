@@ -177,44 +177,59 @@ const transferMoney = async (req, res) => {
       }
   
       // MODIFIED: Search globally for destination account by account number (not restricted to current user)
-      const toAccount = await BankAccount.findOne({ accountNumber: toAccountNumber });
-      if (!toAccount) {
-        throw new Error('Destination account not found');
-      }
-  
+    const toAccount = await BankAccount.findOne({ accountNumber: toAccountNumber });
+    
+    if (toAccount) {
+      // Internal Transfer
       // Deduct from source
-    fromAccount.balance -= Number(amount);
-    await fromAccount.save();
+      fromAccount.balance -= Number(amount);
+      await fromAccount.save();
 
-    // Add to destination
-    toAccount.balance += Number(amount);
-    await toAccount.save();
+      // Add to destination
+      toAccount.balance += Number(amount);
+      await toAccount.save();
 
-    // Log transaction for sender
-    await Transaction.create({
-      user: req.user._id,
-      account: fromAccount._id,
-      type: 'TRANSFER',
-      amount: -amount,
-      description: `Transfer to ${toAccount.bankName} (${toAccount.accountNumber})`,
-      relatedAccount: toAccount._id,
-      date: req.user.simulationDate || Date.now()
-    });
+      // Log transaction for sender
+      await Transaction.create({
+        user: req.user._id,
+        account: fromAccount._id,
+        type: 'TRANSFER',
+        amount: -amount,
+        description: `Transfer to ${toAccount.bankName} (${toAccount.accountNumber})`,
+        relatedAccount: toAccount._id,
+        date: req.user.simulationDate || Date.now()
+      });
 
-    // Log transaction for receiver
-    await Transaction.create({
-      user: toAccount.user,
-      account: toAccount._id,
-      type: 'TRANSFER',
-      amount: amount,
-      description: `Transfer from ${fromAccount.bankName} (${fromAccount.accountNumber})`,
-      relatedAccount: fromAccount._id,
-      date: req.user.simulationDate || Date.now()
-    });
+      // Log transaction for receiver
+      await Transaction.create({
+        user: toAccount.user,
+        account: toAccount._id,
+        type: 'TRANSFER',
+        amount: amount,
+        description: `Transfer from ${fromAccount.bankName} (${fromAccount.accountNumber})`,
+        relatedAccount: fromAccount._id,
+        date: req.user.simulationDate || Date.now()
+      });
+    } else {
+      // External Transfer (to unknown account)
+      // Deduct from source only
+      fromAccount.balance -= Number(amount);
+      await fromAccount.save();
+
+      // Log transaction for sender
+      await Transaction.create({
+        user: req.user._id,
+        account: fromAccount._id,
+        type: 'TRANSFER',
+        amount: -amount,
+        description: `Transfer to External Account (${toAccountNumber})`,
+        date: req.user.simulationDate || Date.now()
+      });
+    }
 
     const breakdown = await computeNetWorth(req.user._id, 'LIVE');
     await User.findByIdAndUpdate(req.user._id, { virtualNetWorth: breakdown.netWorth });
-    res.json({ message: 'Transfer successful' });
+    res.json({ message: toAccount ? 'Transfer successful' : 'External transfer successful' });
 
   } catch (error) {
     // If it fails halfway, we might have inconsistent state (e.g. money deducted but not added).

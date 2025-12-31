@@ -2,6 +2,7 @@ const CreditCard = require('../models/CreditCard');
 const BankAccount = require('../models/BankAccount');
 const Transaction = require('../models/Transaction');
 const mongoose = require('mongoose');
+const { recordSessionTransactions } = require('./simulationSessionService');
 
 // Create a new Credit Card
 const createCard = async (userId, limit = 50000) => {
@@ -32,7 +33,7 @@ const spend = async (cardId, amount, description, date) => {
     
     await card.save();
 
-    await Transaction.create({
+    const tx = await Transaction.create({
         user: card.user,
         account: card._id, // Polymorphic-ish reference, or just store ID
         type: 'EXPENSE', // Credit Card Spend
@@ -40,6 +41,8 @@ const spend = async (cardId, amount, description, date) => {
         description: `${description} (Credit Card)`,
         date: date || new Date()
     });
+
+    await recordSessionTransactions(card.user, [tx._id]);
 
     return card;
 };
@@ -100,7 +103,7 @@ const payBill = async (userId, cardId, amount, fromAccountId, date) => {
     await card.save();
 
     // 3. Log Transactions
-    await Transaction.create({
+    const tx = await Transaction.create({
         user: userId,
         account: account._id,
         type: 'PAYMENT',
@@ -108,6 +111,8 @@ const payBill = async (userId, cardId, amount, fromAccountId, date) => {
         description: `Credit Card Bill Payment (${card.cardNumber.slice(-4)})`,
         date: date || new Date()
     });
+
+    await recordSessionTransactions(userId, [tx._id]);
 
     return { card, account };
 };
@@ -117,6 +122,16 @@ const applyInterest = async (card, simulationDate) => {
     // Only apply if past due date and balance remains
     if (!card.nextDueDate) return;
     
+    // Idempotency Check: Prevent multiple interest applications in the same month
+    if (card.lastInterestAppliedDate) {
+        const lastDate = new Date(card.lastInterestAppliedDate);
+        const simDate = new Date(simulationDate);
+        if (lastDate.getMonth() === simDate.getMonth() && 
+            lastDate.getFullYear() === simDate.getFullYear()) {
+            return; // Already applied for this month
+        }
+    }
+
     if (new Date(simulationDate) > new Date(card.nextDueDate) && card.statementBalance > 0) {
         // Late! Apply Interest
         // Monthly Rate
@@ -132,16 +147,13 @@ const applyInterest = async (card, simulationDate) => {
         card.outstandingBalance += lateFee;
         card.availableCredit -= lateFee;
         card.missedPaymentsCount += 1;
-
-        // Reset Due Date so we don't apply twice? 
-        // Or simulation loop handles "once per month"? 
-        // We'll rely on billing cycle to reset nextDueDate.
-        // For safety, clear nextDueDate or mark as processed.
-        // But simpler: just add interest.
         
+        // Mark as applied
+        card.lastInterestAppliedDate = simulationDate;
+
         await card.save();
         
-        await Transaction.create({
+        const tx1 = await Transaction.create({
             user: card.user,
             account: card._id,
             type: 'INTEREST',
@@ -149,6 +161,17 @@ const applyInterest = async (card, simulationDate) => {
             description: `Credit Card Interest Charge`,
             date: simulationDate
         });
+        
+        const tx2 = await Transaction.create({
+            user: card.user,
+            account: card._id,
+            type: 'EXPENSE', // Or FEE? Using EXPENSE as per schema
+            amount: -lateFee,
+            description: `Credit Card Late Fee`,
+            date: simulationDate
+        });
+
+        await recordSessionTransactions(card.user, [tx1._id, tx2._id]);
     }
 };
 

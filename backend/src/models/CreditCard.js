@@ -71,6 +71,9 @@ const creditCardSchema = new mongoose.Schema({
   missedPaymentsCount: {
     type: Number,
     default: 0
+  },
+  lastInterestAppliedDate: {
+    type: Date
   }
 }, { timestamps: true });
 

@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_KEY = 'd5afpphr01qn2tatvpi0d5afpphr01qn2tatvpig';
+const API_KEY = process.env.FINNHUB_API_KEY;
 const BASE_URL = 'https://finnhub.io/api/v1';
 
 // In-memory cache: { symbol: { data: { direction, confidence, source }, timestamp: number } }

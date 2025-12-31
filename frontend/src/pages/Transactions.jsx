@@ -112,9 +112,9 @@ const Transactions = () => {
             </div>
         </div>
 
-        <div className="overflow-x-auto">
-            <table className="w-full">
-                <thead>
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto custom-scrollbar">
+            <table className="w-full relative">
+                <thead className="sticky top-0 bg-[#0a0a0a] z-10 shadow-sm shadow-white/10">
                     <tr className="text-left border-b border-white/10">
                         <th className="pb-4 text-gray-400 font-medium">Date</th>
                         <th className="pb-4 text-gray-400 font-medium">Description</th>

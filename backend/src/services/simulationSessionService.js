@@ -60,7 +60,8 @@ const endSession = async (userId) => {
         totalInterestPaid: cc.totalInterestPaid,
         missedPaymentsCount: cc.missedPaymentsCount,
         lastStatementDate: cc.lastStatementDate,
-        nextDueDate: cc.nextDueDate
+        nextDueDate: cc.nextDueDate,
+        lastInterestAppliedDate: cc.lastInterestAppliedDate
       });
     }
   }
@@ -110,7 +111,8 @@ const startSession = async (userId) => {
       totalInterestPaid: Number(c.totalInterestPaid || 0),
       missedPaymentsCount: Number(c.missedPaymentsCount || 0),
       lastStatementDate: c.lastStatementDate,
-      nextDueDate: c.nextDueDate
+      nextDueDate: c.nextDueDate,
+      lastInterestAppliedDate: c.lastInterestAppliedDate
     }))
   };
 
