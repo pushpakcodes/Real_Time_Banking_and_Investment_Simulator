@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Piggy Body -->
+  <path d="M54 34C54 24 46 18 36 18C32 18 29 19 26 21C24 20 22 20 20 20C12 20 8 26 8 34C8 38 10 42 14 44V54H20V48H44V54H50V44C52 42 54 38 54 34Z" fill="#4ADE80" stroke="#166534" stroke-width="2" stroke-linejoin="round"/>
+  
+  <!-- Snout -->
+  <path d="M16 30C16 32.2 14.2 34 12 34C9.8 34 8 32.2 8 30" stroke="#166534" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Eye -->
+  <circle cx="22" cy="26" r="2" fill="#166534"/>
+  
+  <!-- Dollar Sign on Body -->
+  <text x="32" y="40" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#166534" text-anchor="middle">$</text>
+  
+  <!-- Coin -->
+  <circle cx="36" cy="10" r="6" fill="#FACC15" stroke="#CA8A04" stroke-width="2"/>
+  <text x="36" y="14" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#CA8A04" text-anchor="middle">$</text>
+  
+  <!-- Tail -->
+  <path d="M54 28C57 28 58 26 58 24C58 22 56 22 56 24" stroke="#166534" stroke-width="2" stroke-linecap="round"/>
+</svg>
