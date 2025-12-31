@@ -17,6 +17,7 @@ const fdRoutes = require('./src/routes/fdRoutes');
 const loanRoutes = require('./src/routes/loanRoutes');
 const creditCardRoutes = require('./src/routes/creditCardRoutes');
 const analyticsRoutes = require('./src/routes/analyticsRoutes');
+const financialGoalRoutes = require('./src/routes/financialGoalRoutes');
 
 // Connect to database
 connectDB();
@@ -47,6 +48,7 @@ app.use('/api/loans', loanRoutes);
 app.use('/api/credit-cards', creditCardRoutes);
 app.use('/api/fds', fdRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/goals', financialGoalRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

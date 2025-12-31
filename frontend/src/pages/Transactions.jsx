@@ -14,7 +14,9 @@ const Transactions = () => {
     const fetchTransactions = async () => {
       try {
         const { data } = await api.get('/bank/transactions');
-        setTransactions(data);
+        // Sort by date descending (latest first)
+        const sorted = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setTransactions(sorted);
       } catch (err) {
         console.error(err);
       } finally {

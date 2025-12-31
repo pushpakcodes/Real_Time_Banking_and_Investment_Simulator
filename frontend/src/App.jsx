@@ -14,6 +14,7 @@ import Loans from './pages/Loans';
 import FDs from './pages/FDs';
 import CreditCards from './pages/CreditCards';
 import Transactions from './pages/Transactions';
+import FinancialGoals from './pages/FinancialGoals';
 
 import Home from './pages/Home';
 
@@ -41,6 +42,7 @@ function App() {
               <Route path="fds" element={<FDs />} />
               <Route path="credit-cards" element={<CreditCards />} />
               <Route path="transactions" element={<Transactions />} />
+              <Route path="goals" element={<FinancialGoals />} />
             </Route>
           </Routes>
         </Router>
