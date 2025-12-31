@@ -3,7 +3,7 @@ import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../api';
-import { LayoutDashboard, Wallet, TrendingUp, IndianRupee, Clock, LogOut, Menu, X, Play, User } from 'lucide-react';
+import { LayoutDashboard, Wallet, TrendingUp, IndianRupee, Clock, LogOut, Menu, X, Play, User, ArrowRightLeft } from 'lucide-react';
 import { AnimatedBackground } from './ui/AnimatedBackground';
 import { motion } from 'framer-motion';
 
@@ -52,6 +52,7 @@ const Layout = () => {
     { path: '/dashboard/stocks', label: 'Stocks', icon: <TrendingUp size={20} /> },
     { path: '/dashboard/loans', label: 'Loans', icon: <IndianRupee size={20} /> },
     { path: '/dashboard/fds', label: 'FDs & Savings', icon: <Clock size={20} /> },
+    { path: '/dashboard/transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} /> },
   ];
 
   return (

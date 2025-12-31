@@ -228,7 +228,7 @@ const Banking = () => {
                   onChange={e => setTransferData({ ...transferData, toAccountNumber: e.target.value })} 
                   required 
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all hover:bg-white/10"
-                  placeholder="Recipient Account Number"
+                  placeholder="Recipient Account Number (Any User)"
                 />
               </div>
               <div>

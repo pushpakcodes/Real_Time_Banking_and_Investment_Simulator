@@ -12,6 +12,7 @@ import Banking from './pages/Banking';
 import Stocks from './pages/Stocks';
 import Loans from './pages/Loans';
 import FDs from './pages/FDs';
+import Transactions from './pages/Transactions';
 
 import Home from './pages/Home';
 
@@ -37,6 +38,7 @@ function App() {
               <Route path="stocks" element={<Stocks />} />
               <Route path="loans" element={<Loans />} />
               <Route path="fds" element={<FDs />} />
+              <Route path="transactions" element={<Transactions />} />
             </Route>
           </Routes>
         </Router>

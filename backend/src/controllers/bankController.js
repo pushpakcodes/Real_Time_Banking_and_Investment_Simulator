@@ -164,24 +164,25 @@ const transferMoney = async (req, res) => {
 
   // NOTE: MongoDB transactions only work on replica sets. 
   // For this local simulation without a complex DB setup, we'll run operations sequentially.
-  // This is less atomic but functional for a dev environment.
+    // This is less atomic but functional for a dev environment.
+    
+    try {
+      const fromAccount = await BankAccount.findOne({ _id: fromAccountId, user: req.user._id });
+      if (!fromAccount) {
+        throw new Error('Source account not found');
+      }
   
-  try {
-    const fromAccount = await BankAccount.findOne({ _id: fromAccountId, user: req.user._id });
-    if (!fromAccount) {
-      throw new Error('Source account not found');
-    }
-
-    if (fromAccount.balance < amount) {
-      throw new Error('Insufficient funds');
-    }
-
-    const toAccount = await BankAccount.findOne({ accountNumber: toAccountNumber });
-    if (!toAccount) {
-      throw new Error('Destination account not found');
-    }
-
-    // Deduct from source
+      if (fromAccount.balance < amount) {
+        throw new Error('Insufficient funds');
+      }
+  
+      // MODIFIED: Search globally for destination account by account number (not restricted to current user)
+      const toAccount = await BankAccount.findOne({ accountNumber: toAccountNumber });
+      if (!toAccount) {
+        throw new Error('Destination account not found');
+      }
+  
+      // Deduct from source
     fromAccount.balance -= Number(amount);
     await fromAccount.save();
 
